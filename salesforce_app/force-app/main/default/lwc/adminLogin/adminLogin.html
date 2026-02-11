@@ -1,0 +1,78 @@
+<template>
+    <div class="login-container">
+        <!-- Background Animation -->
+        <div class="background-shapes">
+            <div class="shape shape-1"></div>
+            <div class="shape shape-2"></div>
+        </div>
+
+        <div class={cardClass}>
+            <div class="login-header">
+                <h1>Admin Portal</h1>
+                <p>{subtitle}</p>
+            </div>
+
+            <template if:true={error}>
+                <div class="error-message"><span>⚠️ {error}</span></div>
+            </template>
+
+            <!-- LOGIN VIEW -->
+            <template if:true={isLoginView}>
+                <div class="input-group">
+                    <lightning-input type="email" label="Email Address" placeholder="Enter Admin Email" value={email}
+                        onchange={handleLoginInput} data-id="email" required class="glass-input"></lightning-input>
+                </div>
+                <div class="input-group">
+                    <lightning-input type="password" label="Password" placeholder="Enter Password" value={password}
+                        onchange={handleLoginInput} data-id="password" required class="glass-input"></lightning-input>
+                </div>
+
+                <div class="link-row">
+                    <a onclick={showRegister}>New Register?</a>
+                </div>
+
+                <button class="login-button" onclick={handleLogin} disabled={isLoading}>
+                    {loginBtnLabel}
+                </button>
+            </template>
+
+            <!-- REGISTER VIEW -->
+            <template if:true={isRegisterView}>
+                <div class="input-group">
+                    <lightning-input label="Full Name" placeholder="Enter Name" value={regData.name}
+                        onchange={handleRegisterInput} data-id="name" required class="glass-input"></lightning-input>
+                </div>
+                <div class="input-group">
+                    <lightning-input type="email" label="Email Address" placeholder="Enter Email" value={regData.email}
+                        onchange={handleRegisterInput} data-id="email" required class="glass-input"></lightning-input>
+                </div>
+                <div class="input-group">
+                    <lightning-input type="password" label="Password" placeholder="Set Password"
+                        value={regData.password} onchange={handleRegisterInput} data-id="password" required
+                        class="glass-input"></lightning-input>
+                </div>
+
+                <div class="input-group">
+                    <lightning-combobox label="Role" placeholder="Select Role" value={regData.role}
+                        options={roleOptions} onchange={handleRegisterInput} data-id="role" required
+                        class="glass-input"></lightning-combobox>
+                </div>
+
+                <div class="link-row">
+                    <a onclick={showLogin}>Back to Login</a>
+                </div>
+
+                <button class="login-button register-btn" onclick={handleRegister} disabled={isLoading}>
+                    {registerBtnLabel}
+                </button>
+            </template>
+
+            <!-- Loading Spinner -->
+            <template if:true={isLoading}>
+                <div class="spinner-container">
+                    <lightning-spinner alternative-text="Loading" size="medium" variant="brand"></lightning-spinner>
+                </div>
+            </template>
+        </div>
+    </div>
+</template>

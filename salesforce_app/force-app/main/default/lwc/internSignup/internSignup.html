@@ -1,0 +1,95 @@
+<template>
+    <div class="signup-container">
+        <!-- Background Animation -->
+        <div class="background-shapes">
+            <div class="shape shape-1"></div>
+            <div class="shape shape-2"></div>
+        </div>
+
+        <div class="glass-card">
+            <header class="logo-header">
+                <span class="logo-icon">📝</span>
+                <h2>Intern Registration</h2>
+                <div style="color: rgba(255,255,255,0.4); font-size: 0.7rem;">v1.0.5</div>
+            </header>
+
+            <!-- Inline Validation Messages -->
+            <template if:true={errorMsg}>
+                <div class="error-banner">
+                    ⚠️ {errorMsg}
+                </div>
+            </template>
+            <template if:true={successMsg}>
+                <div class="success-banner">
+                    ✅ {successMsg}
+                </div>
+            </template>
+
+            <form class="login-form">
+                <div class="form-grid">
+                    <!-- First Name -->
+                    <div class="input-group">
+                        <span class="input-icon">👤</span>
+                        <input type="text" data-id="fname" placeholder="First Name" class="glass-input"
+                            oninput={handleInput} required />
+                    </div>
+                    <!-- Last Name -->
+                    <div class="input-group">
+                        <span class="input-icon">👤</span>
+                        <input type="text" data-id="lname" placeholder="Last Name" class="glass-input"
+                            oninput={handleInput} required />
+                    </div>
+
+                    <!-- Email -->
+                    <div class="input-group form-full-width">
+                        <span class="input-icon">✉️</span>
+                        <input type="email" data-id="email" placeholder="User Email" class="glass-input"
+                            oninput={handleInput} required />
+                    </div>
+
+                    <!-- Phone -->
+                    <div class="input-group">
+                        <span class="input-icon">📱</span>
+                        <input type="tel" data-id="phone" placeholder="Mobile Number" class="glass-input"
+                            oninput={handleInput} required />
+                    </div>
+                    <!-- Roll Number -->
+                    <div class="input-group">
+                        <span class="input-icon">🆔</span>
+                        <input type="text" data-id="rollNo" placeholder="Roll Number" class="glass-input"
+                            oninput={handleInput} />
+                    </div>
+
+                    <!-- College -->
+                    <div class="input-group form-full-width">
+                        <span class="input-icon">🏫</span>
+                        <input type="text" data-id="college" placeholder="College Name" class="glass-input"
+                            oninput={handleInput} />
+                    </div>
+
+                    <!-- Address -->
+                    <div class="input-group form-full-width">
+                        <span class="input-icon">📍</span>
+                        <textarea data-id="address" placeholder="Address" class="glass-input" rows="2"
+                            oninput={handleInput}></textarea>
+                    </div>
+
+                    <!-- Password -->
+                    <div class="input-group form-full-width">
+                        <span class="input-icon">🔒</span>
+                        <input type="password" data-id="password" placeholder="Password" class="glass-input"
+                            oninput={handleInput} required />
+                    </div>
+                </div>
+
+                <button type="button" class="login-btn" onclick={handleSignup} disabled={isLoading}>
+                    {buttonLabel}
+                </button>
+            </form>
+
+            <div class="back-link">
+                Already have an account? <a onclick={navigateToLogin}>Login Here</a>
+            </div>
+        </div>
+    </div>
+</template>

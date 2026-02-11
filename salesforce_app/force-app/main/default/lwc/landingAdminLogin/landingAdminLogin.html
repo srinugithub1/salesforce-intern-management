@@ -1,0 +1,164 @@
+<template>
+    <div class="login-container">
+        <!-- Animated Background -->
+        <div class="background-animation">
+            <div class="floating-shape shape-1"></div>
+            <div class="floating-shape shape-2"></div>
+            <div class="floating-shape shape-3"></div>
+            <div class="gradient-overlay"></div>
+        </div>
+
+        <!-- Main Card -->
+        <div class={cardClass}>
+            <!-- Logo & Header -->
+            <div class="login-header">
+                <div class="logo-wrapper">
+                    <lightning-icon icon-name="standard:user" size="large" class="admin-logo">
+                    </lightning-icon>
+                </div>
+                <h1 class="main-title">{headerTitle}</h1>
+                <p class="subtitle">{subtitle}</p>
+                <div class="divider"></div>
+            </div>
+
+            <!-- Error Message -->
+            <template if:true={error}>
+                <div class="error-alert">
+                    <lightning-icon icon-name="utility:warning" size="x-small" class="error-icon">
+                    </lightning-icon>
+                    <span class="error-text">{error}</span>
+                </div>
+            </template>
+
+            <!-- SUCCESS Message -->
+            <template if:true={successMessage}>
+                <div class="success-alert">
+                    <lightning-icon icon-name="utility:success" size="x-small" class="success-icon">
+                    </lightning-icon>
+                    <span class="success-text">{successMessage}</span>
+                </div>
+            </template>
+
+            <!-- LOGIN VIEW -->
+            <template if:true={isLoginView}>
+                <form class="login-form" onsubmit={handleFormSubmit}>
+                    <div class="input-wrapper">
+                        <div class="input-icon">
+                            <lightning-icon icon-name="utility:email" size="x-small">
+                            </lightning-icon>
+                        </div>
+                        <input type="email" placeholder="admin@company.com" value={email} oninput={handleLoginInput}
+                            data-id="email" required class="modern-input" />
+                    </div>
+
+                    <div class="input-wrapper">
+                        <div class="input-icon">
+                            <lightning-icon icon-name="utility:lock" size="x-small">
+                            </lightning-icon>
+                        </div>
+                        <input type="password" placeholder="Enter your password" value={password}
+                            oninput={handleLoginInput} data-id="password" required class="modern-input" />
+                    </div>
+
+                    <div class="action-links">
+                        <label class="remember-me">
+                            <input type="checkbox" onchange={handleRememberMe}>
+                            <span>Remember me</span>
+                        </label>
+                        <a class="forgot-link" onclick={handleForgotPassword}>Forgot Password?</a>
+                    </div>
+
+                    <button type="submit" class="primary-button" disabled={isLoading}>
+                        <template if:false={isLoading}>
+                            <lightning-icon icon-name="utility:login" size="x-small" class="button-icon">
+                            </lightning-icon>
+                            <span>Secure Login</span>
+                        </template>
+                        <template if:true={isLoading}>
+                            <span>Authenticating...</span>
+                        </template>
+                    </button>
+
+
+                </form>
+            </template>
+
+            <!-- REGISTER VIEW -->
+            <template if:true={isRegisterView}>
+                <form class="login-form" onsubmit={handleFormSubmit}>
+                    <div class="input-wrapper">
+                        <div class="input-icon">
+                            <lightning-icon icon-name="utility:user" size="x-small">
+                            </lightning-icon>
+                        </div>
+                        <input type="text" placeholder="John Doe" value={regData.name} oninput={handleRegisterInput}
+                            data-id="name" required class="modern-input" />
+                    </div>
+
+                    <div class="input-wrapper">
+                        <div class="input-icon">
+                            <lightning-icon icon-name="utility:email" size="x-small">
+                            </lightning-icon>
+                        </div>
+                        <input type="email" placeholder="admin@company.com" value={regData.email}
+                            oninput={handleRegisterInput} data-id="email" required class="modern-input" />
+                    </div>
+
+                    <div class="input-wrapper">
+                        <div class="input-icon">
+                            <lightning-icon icon-name="utility:lock" size="x-small">
+                            </lightning-icon>
+                        </div>
+                        <input type="password" placeholder="Create a strong password" value={regData.password}
+                            oninput={handleRegisterInput} data-id="password" required class="modern-input" />
+                    </div>
+
+                    <div class="input-wrapper">
+                        <div class="input-icon">
+                            <lightning-icon icon-name="utility:shield" size="x-small">
+                            </lightning-icon>
+                        </div>
+                        <lightning-combobox label="Role" placeholder="Select your admin role" value={regData.role}
+                            options={roleOptions} onchange={handleRegisterInput} data-id="role" required
+                            class="modern-input" variant="label-hidden">
+                        </lightning-combobox>
+                    </div>
+
+                    <button type="submit" class="primary-button" disabled={isLoading}>
+                        <template if:false={isLoading}>
+                            <lightning-icon icon-name="utility:adduser" size="x-small" class="button-icon">
+                            </lightning-icon>
+                            <span>Create Account</span>
+                        </template>
+                        <template if:true={isLoading}>
+                            <span>Creating Account...</span>
+                        </template>
+                    </button>
+
+                    <div class="separator">
+                        <span>Already registered?</span>
+                    </div>
+
+                    <button type="button" class="secondary-button" onclick={showLogin}>
+                        <lightning-icon icon-name="utility:back" size="x-small" class="button-icon">
+                        </lightning-icon>
+                        <span>Back to Login</span>
+                    </button>
+                </form>
+            </template>
+
+            <!-- Loading Spinner Overlay -->
+            <template if:true={isLoading}>
+                <div class="loading-overlay">
+                    <lightning-spinner alternative-text="Loading" size="medium" variant="brand">
+                    </lightning-spinner>
+                </div>
+            </template>
+            <!-- Footer Info -->
+            <div class="footer-info">
+                <p>Secure Admin Portal • Enterprise Grade Security</p>
+                <p class="version">v2.0 • Built with Salesforce</p>
+            </div>
+        </div>
+    </div>
+</template>

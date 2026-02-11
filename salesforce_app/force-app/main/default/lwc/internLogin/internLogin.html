@@ -1,0 +1,123 @@
+<template>
+    <div class="login-container">
+        <!-- Background Animation -->
+        <!-- Background Animation -->
+        <div class="background-shapes">
+            <div class="shape shape-1"></div>
+            <div class="shape shape-2"></div>
+        </div>
+
+        <div class={cardClass}>
+            <!-- HEADER (Shared or Dynamic) -->
+            <div class="login-header">
+                <template if:true={isLoginView}>
+                    <h1>Student Portal</h1>
+                    <p>Please sign in to continue <small>v2.1</small></p>
+                </template>
+                <template if:true={isRegisterView}>
+                    <h1>Register</h1>
+                    <p>Create your intern account</p>
+                </template>
+                <template if:true={isForgotView}>
+                    <h1>Reset Password</h1>
+                    <p>Recover access to your account</p>
+                </template>
+            </div>
+
+            <template if:true={error}>
+                <div class="error-message"><span>⚠️ {error}</span></div>
+            </template>
+
+            <!-- LOGIN VIEW -->
+            <template if:true={isLoginView}>
+                <div class="input-group">
+                    <lightning-input type="email" label="Email Address" placeholder="Enter your email" data-id="email"
+                        required onchange={handleLoginInput} class="glass-input"></lightning-input>
+                </div>
+                <div class="input-group">
+                    <lightning-input type="password" label="Password" placeholder="Enter your password"
+                        data-id="password" required onchange={handleLoginInput} class="glass-input"></lightning-input>
+                </div>
+                <div class="footer-links">
+                    <a onclick={showRegister} class="link-item">New Register?</a>
+                    <a onclick={showForgot} class="link-item">Forget Your Password?</a>
+                </div>
+                <button class="login-button" onclick={handleLogin} disabled={isLoading}>{loginBtnLabel}</button>
+            </template>
+
+            <!-- REGISTER VIEW -->
+            <template if:true={isRegisterView}>
+                <div class="scrollable-form register-grid">
+                    <div class="input-group">
+                        <lightning-input type="text" label="First Name" placeholder="First Name" data-id="fname"
+                            required onchange={handleRegisterInput} class="glass-input"></lightning-input>
+                    </div>
+                    <div class="input-group">
+                        <lightning-input type="text" label="Last Name" placeholder="Last Name" data-id="lname" required
+                            onchange={handleRegisterInput} class="glass-input"></lightning-input>
+                    </div>
+                    <div class="input-group">
+                        <lightning-input type="email" label="Email" placeholder="Email" data-id="email" required
+                            onchange={handleRegisterInput} class="glass-input"></lightning-input>
+                    </div>
+                    <div class="input-group">
+                        <lightning-input type="tel" label="Phone" placeholder="Phone" data-id="phone" required
+                            onchange={handleRegisterInput} class="glass-input"></lightning-input>
+                    </div>
+                    <div class="input-group">
+                        <lightning-input type="text" label="College Name" placeholder="College Name" data-id="college"
+                            required onchange={handleRegisterInput} class="glass-input"></lightning-input>
+                    </div>
+                    <div class="input-group">
+                        <lightning-input type="text" label="Roll Number" placeholder="Roll Number" data-id="rollNo"
+                            required onchange={handleRegisterInput} class="glass-input"></lightning-input>
+                    </div>
+                    <div class="input-group span-col">
+                        <lightning-input type="text" label="Address" placeholder="Address" data-id="address" required
+                            onchange={handleRegisterInput} class="glass-input"></lightning-input>
+                    </div>
+                    <div class="input-group span-col">
+                        <lightning-input type="password" label="Password" placeholder="Password" data-id="password"
+                            required onchange={handleRegisterInput} class="glass-input"></lightning-input>
+                    </div>
+                </div>
+                <button class="login-button" onclick={handleRegister} disabled={isLoading}>{registerBtnLabel}</button>
+                <div class="back-link">
+                    Already have an account? <a onclick={showLogin}>Login Here</a>
+                </div>
+            </template>
+
+            <!-- FORGOT PASSWORD VIEW -->
+            <template if:true={isForgotView}>
+                <template if:false={isForgotSuccess}>
+                    <div class="input-group">
+                        <lightning-input type="email" label="Email Address" placeholder="Enter Your Email"
+                            data-id="email" required onchange={handleForgotInput} class="glass-input"></lightning-input>
+                    </div>
+                    <div class="input-group">
+                        <lightning-input type="text" label="College Name" placeholder="College Name" data-id="college"
+                            required onchange={handleForgotInput} class="glass-input"></lightning-input>
+                    </div>
+                    <button class="login-button" onclick={handleForgotSubmit}
+                        disabled={isLoading}>{forgotBtnLabel}</button>
+                </template>
+                <template if:true={isForgotSuccess}>
+                    <div class="success-message">
+                        <h3>✅ Request Sent!</h3>
+                        <p>Check your email for instructions.</p>
+                    </div>
+                </template>
+                <div class="back-link" style="margin-top:1rem;">
+                    Remember password? <a onclick={showLogin}>Login Here</a>
+                </div>
+            </template>
+
+            <!-- Loading Spinner -->
+            <template if:true={isLoading}>
+                <div class="spinner-container">
+                    <lightning-spinner alternative-text="Loading" size="medium" variant="brand"></lightning-spinner>
+                </div>
+            </template>
+        </div>
+    </div>
+</template>

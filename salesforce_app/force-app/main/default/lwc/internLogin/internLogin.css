@@ -1,0 +1,347 @@
+/* Main Container with Animated Background */
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    width: 100vw;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    /* Animated Gradient Background 'Slides' */
+    background: linear-gradient(45deg, #1a2a6c, #b21f1f, #fdbb2d, #2F80ED, #56CCF2);
+    background-size: 400% 400%;
+    animation: gradientSlide 15s ease infinite;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 0;
+}
+
+@keyframes gradientSlide {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+/* Glassmorphism Card */
+.glass-card {
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    padding: 1.2rem;
+    /* Reduced from 1.5rem */
+    width: 100%;
+    max-width: 380px;
+    /* Reduced from 400px */
+    /* Standard card slightly smaller */
+    z-index: 1;
+    color: white;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    transition: max-width 0.4s ease-in-out;
+    max-height: 95vh;
+    overflow-y: hidden;
+    /* Hide scroll unless necessary */
+}
+
+/* Hide scrollbar for the card itself */
+.glass-card::-webkit-scrollbar {
+    display: none;
+}
+
+/* WIDER CARD FOR REGISTER GRID - Reduced Width */
+.wide-card {
+    max-width: 580px;
+    /* Reduced from 650px */
+    /* Reduced from 800px to be more compact */
+}
+
+/* Scrollable form if content overflows */
+/* Scrollable form - Increased height limit to avoid scrollbar on standard screens */
+.scrollable-form {
+    max-height: 85vh;
+    /* Increased from 60vh */
+    overflow-y: auto;
+    /* Will only scroll if remarkably small screen */
+    padding-right: 2px;
+}
+
+.scrollable-form::-webkit-scrollbar {
+    width: 0px;
+    background: transparent;
+}
+
+
+/* Header Styling */
+.login-header h1 {
+    font-size: 1.4rem;
+    /* Reduced from 1.6rem */
+    /* Slightly smaller */
+    font-weight: 700;
+    margin-bottom: 0.1rem;
+    background: -webkit-linear-gradient(#fff, #e0e0e0);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.login-header p {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.8rem;
+    /* Reduced from 0.85rem */
+    margin-bottom: 0.6rem;
+    /* Reduced from 0.8rem */
+}
+
+/* Input Fields Area */
+.input-group {
+    margin-bottom: 0.4rem;
+    /* Reduced from 0.5rem */
+    /* Reduced */
+    text-align: left;
+}
+
+/* Customizing Lightning Input to look like Glass */
+/* Styling LWC Internal Labels */
+.glass-input {
+    /* Background & Text */
+    --slds-c-input-color-background: rgba(0, 0, 0, 0.25);
+    /* Darker background for contrast */
+    --slds-c-input-text-color: #fff;
+
+    /* Borders */
+    --slds-c-input-color-border: rgba(255, 255, 255, 0.5);
+    --slds-c-input-color-border-focus: #fff;
+    --slds-c-input-radius-border: 8px;
+    --slds-c-input-shadow-focus: 0 0 10px rgba(255, 255, 255, 0.5);
+    /* Placeholder color is tricky to style directly via var, usually needs global override or darker background helps */
+
+    /* --- LABEL STYLING (Aggressive Hooks) --- */
+    /* Color */
+    --slds-c-input-label-text-color: #ffffff;
+    --slds-c-form-element-label-text-color: #ffffff;
+    /* Fallback */
+    color: white;
+    /* Fallback inheritance */
+
+    /* Font Style */
+    --slds-c-input-label-font-size: 0.95rem;
+    /* Reduced from 1rem to match scale */
+    /* Reverting to 1rem to save space, 1.15 was too big? User asked for increase though. compromise 1.05 */
+    --slds-c-input-label-font-weight: 700;
+    /* Bold */
+    --slds-c-input-font-family: 'Segoe UI', Roboto, sans-serif;
+    /* Clean font */
+
+    /* Spacing */
+    --slds-c-input-spacing-vertical: 0.1rem;
+    /* Even tighter */
+    /* Tight vertical spacing */
+
+    /* VALIDATION ERROR STYLING */
+    --slds-c-input-color-border-error: #ff4d4d;
+    /* Bright Red Border */
+    --slds-c-form-element-help-text-color: #ff9999;
+    /* Lighter Red for better visibility on dark bg */
+    --slds-c-input-shadow-focus-error: 0 0 10px #ff0000;
+    /* Red Glow */
+
+    /* PREVENT WHITE BACKGROUND ON ERROR */
+    --slds-c-input-color-background-error: rgba(0, 0, 0, 0.2);
+    --slds-c-input-text-color-error: #ffffff;
+    --slds-c-input-error-message-text-color: #ff9999;
+    /* Explicit hook for message */
+
+    width: 100%;
+    background: rgba(0, 0, 0, 0.2);
+    /* Darker tint for better text readability */
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 8px;
+    outline: none;
+    font-weight: 500;
+}
+
+/* Force Error Message Visibility if hooks fail */
+.glass-input .slds-form-element__help {
+    color: #ff9999 !important;
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin-top: 2px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    /* Shadow for legibility */
+}
+
+/* Button Styling - Vibrant Blue Gradient */
+.login-button {
+    width: 100%;
+    padding: 0.6rem;
+    /* Reduced from 0.7rem */
+    /* Reduced */
+    border: none;
+    border-radius: 50px;
+    background: linear-gradient(90deg, #00d2ff 0%, #3a7bd5 100%);
+    /* Ensuring this gradient applies */
+    color: white;
+    font-size: 1rem;
+    /* Reduced from 1.1rem */
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    margin-top: 0.6rem;
+    /* Reduced from 0.8rem */
+    /* Reduced */
+    display: block;
+    /* Ensure it takes width */
+}
+
+.login-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(90deg, #00C6FF 0%, #0072FF 100%);
+}
+
+.login-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: linear-gradient(90deg, #00d2ff 0%, #3a7bd5 100%);
+}
+
+/* REGISTER GRID STYLES */
+.register-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    /* Reduced gap from 0.6rem */
+    /* Tighter gap */
+    /* Reduced gap */
+    text-align: left;
+    margin-bottom: 0.4rem;
+    /* Reduced */
+    padding: 0 0.2rem;
+}
+
+/* Make inputs span 2 cols on mobile or if class applied */
+.span-col {
+    grid-column: span 2;
+}
+
+/* Ensure inputs inside grid don't have excessive bottom margin */
+.register-grid .input-group {
+    margin-bottom: 0;
+}
+
+/* Responsive adjustment for small screens */
+@media (max-width: 600px) {
+    .register-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .span-col {
+        grid-column: span 1;
+    }
+}
+
+/* Loading Spinner Overrides */
+.spinner-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 20px;
+    z-index: 10;
+}
+
+/* --- NEW STYLES for Links & Modal --- */
+
+.footer-links {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+}
+
+.link-item {
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    cursor: pointer;
+    transition: color 0.3s;
+}
+
+.link-item:hover {
+    color: #fff;
+    text-decoration: underline;
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+}
+
+.modal-card {
+    max-width: 400px;
+    animation: fadeInUp 0.3s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.modal-btn {
+    flex: 1;
+    padding: 0.8rem;
+    border-radius: 30px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.modal-btn.cancel {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.modal-btn.submit {
+    background: linear-gradient(90deg, #00d2ff 0%, #3a7bd5 100%);
+    color: white;
+}

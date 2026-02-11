@@ -1,0 +1,264 @@
+<template>
+    <!-- FULL PAGE DASHBOARD VIEWS (after login) -->
+    <template if:true={isFullPageAdmin}>
+        <c-landing-admin-app onbacktolanding={handleBackToLanding}></c-landing-admin-app>
+    </template>
+
+    <template if:true={isFullPageIntern}>
+        <c-landing-intern-app onbacktolanding={handleBackToLanding}></c-landing-intern-app>
+    </template>
+
+    <!-- LANDING VIEW (visible when not in full-page dashboard) -->
+    <template if:true={isLandingView}>
+    <div class="landing-container">
+        <!-- Animated Background -->
+        <div class="animated-background">
+            <div class="floating-orb orb-1"></div>
+            <div class="floating-orb orb-2"></div>
+            <div class="floating-orb orb-3"></div>
+            <div class="floating-orb orb-4"></div>
+            <div class="mesh-gradient"></div>
+        </div>
+
+        <!-- Navigation Bar -->
+        <nav class="navbar">
+            <div class="nav-content">
+                <div class="brand">
+                    <img src={logoUrl} alt="LearnersByte Expertpedia" class="brand-logo-image" />
+                    <span class="brand-text">InternHub</span>
+                </div>
+                <div class="nav-actions">
+                    <button class="nav-btn secondary-nav-btn" onclick={handleAdminLogin}>Admin</button>
+                    <button class="nav-btn primary-nav-btn" onclick={handleInternLogin}>Intern Portal</button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <div class="hero-content">
+                <div class="badge">
+                    <lightning-icon icon-name="utility:announcement" size="xx-small"
+                        class="badge-icon"></lightning-icon>
+                    <span>Trusted by 100+ Organizations</span>
+                </div>
+                <h1 class="hero-title">
+                    Transform Your<br />
+                    <span class="gradient-text">Internship Program</span>
+                </h1>
+                <p class="hero-subtitle">
+                    Modern, powerful, and intuitive platform to manage interns, track progress,
+                    and build the future of your organization—all in one place.
+                </p>
+
+                <!-- Portal Cards -->
+                <div class="portal-cards">
+                    <div class="portal-card admin-portal" onclick={handleAdminLogin}>
+                        <div class="portal-icon-wrapper admin-icon-wrapper">
+                            <lightning-icon icon-name="standard:user" size="medium"
+                                class="portal-icon"></lightning-icon>
+                        </div>
+                        <div class="portal-info">
+                            <h3 class="portal-title">Admin Portal</h3>
+                            <p class="portal-desc">Manage & Oversee Programs</p>
+                        </div>
+                        <div class="portal-arrow">
+                            <lightning-icon icon-name="utility:chevronright" size="small"
+                                class="arrow-icon"></lightning-icon>
+                        </div>
+                    </div>
+
+                    <div class="portal-card intern-portal" onclick={handleInternLogin}>
+                        <div class="portal-icon-wrapper intern-icon-wrapper">
+                            <lightning-icon icon-name="standard:portal" size="medium"
+                                class="portal-icon"></lightning-icon>
+                        </div>
+                        <div class="portal-info">
+                            <h3 class="portal-title">Intern Portal</h3>
+                            <p class="portal-desc">Access Your Dashboard</p>
+                        </div>
+                        <div class="portal-arrow">
+                            <lightning-icon icon-name="utility:chevronright" size="small"
+                                class="arrow-icon"></lightning-icon>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Section -->
+            <div class="stats-container">
+                <div class="stat-item">
+                    <div class="stat-number">2000+</div>
+                    <div class="stat-label">Active Interns</div>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <div class="stat-number">98%</div>
+                    <div class="stat-label">Success Rate</div>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <div class="stat-number">100+</div>
+                    <div class="stat-label">Organizations</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section class="features-section">
+            <div class="features-header">
+                <span class="features-tag">FEATURES</span>
+                <h2 class="features-title">Everything You Need</h2>
+                <p class="features-subtitle">Powerful tools designed to streamline your internship management</p>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon-box">
+                        <lightning-icon icon-name="standard:task" size="medium"
+                            class="feature-icon"></lightning-icon>
+                    </div>
+                    <h3 class="feature-title">Smart Task Management</h3>
+                    <p class="feature-description">Assign, track, and manage tasks with intelligent automation and
+                        real-time updates</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon-box">
+                        <lightning-icon icon-name="standard:dashboard" size="medium"
+                            class="feature-icon"></lightning-icon>
+                    </div>
+                    <h3 class="feature-title">Advanced Analytics</h3>
+                    <p class="feature-description">Gain insights with powerful dashboards and comprehensive
+                        reporting tools</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon-box">
+                        <lightning-icon icon-name="standard:live_chat" size="medium"
+                            class="feature-icon"></lightning-icon>
+                    </div>
+                    <h3 class="feature-title">Real-Time Communication</h3>
+                    <p class="feature-description">Connect teams instantly with integrated messaging and
+                        collaboration tools</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon-box">
+                        <lightning-icon icon-name="standard:announcement" size="medium"
+                            class="feature-icon"></lightning-icon>
+                    </div>
+                    <h3 class="feature-title">Smart Announcements</h3>
+                    <p class="feature-description">Keep everyone informed with targeted, timely announcements and
+                        notifications</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon-box">
+                        <lightning-icon icon-name="standard:work_capacity_usage" size="medium"
+                            class="feature-icon"></lightning-icon>
+                    </div>
+                    <h3 class="feature-title">Progress Tracking</h3>
+                    <p class="feature-description">Monitor intern development with detailed work logs and
+                        performance metrics</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon-box">
+                        <lightning-icon icon-name="standard:data_integration_hub" size="medium"
+                            class="feature-icon"></lightning-icon>
+                    </div>
+                    <h3 class="feature-title">Enterprise Security</h3>
+                    <p class="feature-description">Bank-level encryption and security powered by Salesforce
+                        infrastructure</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA Section -->
+        <section class="cta-section">
+            <div class="cta-content">
+                <h2 class="cta-title">Ready to Get Started?</h2>
+                <p class="cta-subtitle">Join hundreds of organizations transforming their internship programs</p>
+                <div class="cta-buttons">
+                    <button class="cta-btn primary-cta" onclick={handleInternLogin}>
+                        <span>Start as Intern</span>
+                        <lightning-icon icon-name="utility:forward" size="x-small"
+                            class="cta-icon"></lightning-icon>
+                    </button>
+                    <button class="cta-btn secondary-cta" onclick={handleAdminLogin}>
+                        <span>Admin Access</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer-section">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <div class="footer-brand-header">
+                        <lightning-icon icon-name="standard:group_loading" size="small"
+                            class="footer-brand-icon"></lightning-icon>
+                        <span class="footer-brand-text">InternHub</span>
+                    </div>
+                    <p class="footer-brand-desc">
+                        Empowering organizations to build exceptional internship programs
+                        with modern technology and innovative solutions.
+                    </p>
+                </div>
+
+                <div class="footer-links">
+                    <div class="footer-column">
+                        <h4 class="footer-heading">Quick Access</h4>
+                        <p class="footer-link" onclick={handleAdminLogin}>Admin Portal</p>
+                        <p class="footer-link" onclick={handleInternLogin}>Intern Portal</p>
+                    </div>
+
+                    <div class="footer-column">
+                        <h4 class="footer-heading">Support</h4>
+                        <p class="footer-link-text">
+                            <lightning-icon icon-name="utility:email" size="xx-small"
+                                class="footer-icon"></lightning-icon>
+                            info@learnersbyte.com
+                        </p>
+                        <p class="footer-link-text">
+                            <lightning-icon icon-name="utility:help" size="xx-small"
+                                class="footer-icon"></lightning-icon>
+                            Help Center
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p class="footer-copyright">&copy; 2026 InternHub. All rights reserved. Built with Salesforce.</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- MODAL OVERLAY -->
+    <template if:true={isModalOpen}>
+        <div class={modalOverlayClass} onclick={handleOverlayClick}>
+            <div class="modal-container" onclick={handleModalContentClick}>
+                <!-- Close Button -->
+                <button class="modal-close-btn" onclick={handleCloseModal}>
+                    <lightning-icon icon-name="utility:close" size="small" class="close-icon"></lightning-icon>
+                </button>
+
+                <!-- Admin App inside Modal -->
+                <template if:true={isAdminView}>
+                    <c-landing-admin-app onbacktolanding={handleCloseModal}
+                        onauthenticated={handleAuthenticated}></c-landing-admin-app>
+                </template>
+
+                <!-- Intern App inside Modal -->
+                <template if:true={isInternView}>
+                    <c-landing-intern-app onbacktolanding={handleCloseModal}
+                        onauthenticated={handleAuthenticated}></c-landing-intern-app>
+                </template>
+            </div>
+        </div>
+    </template>
+    </template>
+</template>

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Comprehensive access for the Internship Portal (Admin &amp; Intern roles)</description>
+    <hasActivationRequired>false</hasActivationRequired>
+    <label>Internship Portal Full Access</label>
+    
+    <classAccesses>
+        <apexClass>AdminAuthController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>AdminController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>InternAuthController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>InternWorkController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+
+    <fieldPermissions>
+        <field>Admin_User__c.Session_Token__c</field>
+        <editable>true</editable>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <field>Intern__c.Team_Lead__c</field>
+        <editable>true</editable>
+        <readable>true</readable>
+    </fieldPermissions>
+
+    <objectPermissions>
+        <allowCreate>true</allowCreate><allowDelete>true</allowDelete><allowEdit>true</allowEdit><allowRead>true</allowRead>
+        <object>Admin_User__c</object>
+    </objectPermissions>
+    <objectPermissions>
+        <allowCreate>true</allowCreate><allowDelete>true</allowDelete><allowEdit>true</allowEdit><allowRead>true</allowRead>
+        <object>Intern__c</object>
+    </objectPermissions>
+    <objectPermissions>
+        <allowCreate>true</allowCreate><allowDelete>true</allowDelete><allowEdit>true</allowEdit><allowRead>true</allowRead>
+        <object>Leave_Request__c</object>
+    </objectPermissions>
+    <objectPermissions>
+        <allowCreate>true</allowCreate><allowDelete>true</allowDelete><allowEdit>true</allowEdit><allowRead>true</allowRead>
+        <object>Mentorship_Request__c</object>
+    </objectPermissions>
+    <objectPermissions>
+        <allowCreate>true</allowCreate><allowDelete>true</allowDelete><allowEdit>true</allowEdit><allowRead>true</allowRead>
+        <object>Daily_Log__c</object>
+    </objectPermissions>
+    <objectPermissions>
+        <allowRead>true</allowRead>
+        <object>Resource__c</object>
+    </objectPermissions>
+    <objectPermissions>
+        <allowRead>true</allowRead>
+        <object>Announcement__c</object>
+    </objectPermissions>
+
+</PermissionSet>

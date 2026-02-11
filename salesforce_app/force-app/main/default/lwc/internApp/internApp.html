@@ -1,0 +1,17 @@
+<template>
+    <template lwc:if={isCheckingSession}>
+        <div style="padding:2rem; text-align:center;">
+            <lightning-spinner alternative-text="Checking Session"></lightning-spinner>
+            <p style="margin-top:20px; color:gray;">Loading App v3.0...</p>
+        </div>
+    </template>
+    <template lwc:else>
+        <template lwc:if={isAuthenticated}>
+            <c-intern-dashboard token={sessionToken} intern-name={internName}
+                onlogout={handleLogout}></c-intern-dashboard>
+        </template>
+        <template lwc:else>
+            <c-intern-login onlogin={handleLogin}></c-intern-login>
+        </template>
+    </template>
+</template>

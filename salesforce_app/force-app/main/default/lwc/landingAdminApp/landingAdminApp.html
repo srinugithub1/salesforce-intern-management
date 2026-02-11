@@ -1,0 +1,17 @@
+<template>
+    <template lwc:if={isCheckingSession}>
+        <div style="padding:2rem; text-align:center;">
+            <lightning-spinner alternative-text="Checking Session"></lightning-spinner>
+            <p style="margin-top:20px; color:gray;">Loading Admin Portal...</p>
+        </div>
+    </template>
+    <template lwc:else>
+        <template if:false={isAuthenticated}>
+            <c-landing-admin-login onlogin={handleLogin} onbacktolanding={handleBackToLanding}></c-landing-admin-login>
+        </template>
+
+        <template if:true={isAuthenticated}>
+            <c-landing-admin-dashboard token={token} role={role} admin-name={adminName} onlogout={handleLogout}></c-landing-admin-dashboard>
+        </template>
+    </template>
+</template>

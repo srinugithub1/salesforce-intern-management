@@ -1,0 +1,1200 @@
+<template>
+    <div class="dashboard-container">
+        <!-- Dashboard Container -->
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h2>Admin<span>Portal</span></h2>
+            </div>
+
+            <nav class="nav-menu">
+                <a class={navClassDashboard} onclick={handleTabSwitch} data-tab="dashboard">
+                    <span class="icon">📊</span> Dashboard
+                </a>
+                <a class={navClassInterns} onclick={handleTabSwitch} data-tab="interns">
+                    <span class="icon">🎓</span> Interns
+                </a>
+                <!-- Leaves Tab Removed -->
+                <a class={navClassMentorship} onclick={handleTabSwitch} data-tab="mentorship">
+                    <span class="icon">💬</span> Mentorship
+                </a>
+                <a class={navClassLogs} onclick={handleTabSwitch} data-tab="logs">
+                    <span class="icon">📝</span> Intern Diary
+                </a>
+                <a class={navClassSyllabus} onclick={handleTabSwitch} data-tab="syllabus">
+                    <span class="icon">📖</span> Course Syllabus
+                </a>
+                <a class={navClassAnnouncements} onclick={handleTabSwitch} data-tab="announcements">
+                    <span class="icon">📢</span> Announcements
+                </a>
+                <a class={navClassResources} onclick={handleTabSwitch} data-tab="resources">
+                    <span class="icon">📚</span> Resources
+                </a>
+                <a class={navClassTasks} onclick={handleTabSwitch} data-tab="tasks">
+                    <span class="icon">📋</span> Tasks
+                </a>
+            </nav>
+
+            <div class="logout-section">
+                <a onclick={handleLogout}>
+                    <span class="icon">🚪</span> Logout
+                </a>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="top-header">
+                <div class="header-main">
+                    <template if:true={isDashboardTab}>
+                        <div class="welcome-header-top">
+                            <h1>Welcome Back, <span>{formattedRole}</span></h1>
+                            <p>Here is what's happening with your interns today.</p>
+                        </div>
+                    </template>
+                    <template if:false={isDashboardTab}>
+                        <template if:true={showTopHeader}>
+                            <h3>{currentTabTitle}</h3>
+                        </template>
+                    </template>
+                </div>
+            </header>
+
+
+            <!-- Dynamic Content -->
+            <div class="content-scroll">
+
+                <!-- DASHBOARD OVERVIEW -->
+                <template if:true={isDashboardTab}>
+                    <div class="dashboard-view-container">
+                        <!-- REMOVED SUPER ADMIN TEXT -->
+
+                        <!-- Admin Metrics Cards -->
+                        <div class="metrics-grid slds-m-bottom_large">
+                            <div class="metric-card clickable" onclick={handleTabSwitch} data-tab="interns">
+                                <div class="metric-info">
+                                    <p class="metric-label">Total Interns</p>
+                                    <h4 class="metric-value">{metrics.totalInterns}</h4>
+                                </div>
+                                <span class="metric-icon">🎓</span>
+                            </div>
+                            <!-- REPLACED PENDING LEAVES WITH SYLLABUS COUNT -->
+                            <div class="metric-card clickable" onclick={handleTabSwitch} data-tab="syllabus">
+                                <div class="metric-info">
+                                    <p class="metric-label">Course Topics</p>
+                                    <h4 class="metric-value">{metrics.syllabusCount}</h4>
+                                </div>
+                                <span class="metric-icon">📚</span>
+                            </div>
+                            <div class="metric-card clickable" onclick={handleNavigateToTasks}>
+                                <div class="metric-info">
+                                    <p class="metric-label">Manage Tasks</p>
+                                    <h4 class="metric-value">{metrics.totalTasks}</h4>
+                                </div>
+                                <span class="metric-icon">📋</span>
+                            </div>
+                        </div>
+
+                        <!-- Charts Row (Graphical Enhanced) -->
+                        <div class="metrics-grid charts-grid">
+                            <!-- 1. Task Status (Animated SVG Circle) -->
+                            <div class="overview-card chart-container">
+                                <h3>Task Status</h3>
+                                <div class="chart-content">
+                                    <svg viewBox="0 0 36 36" class="circular-chart blue">
+                                        <path class="circle-bg"
+                                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                        <path class="circle" stroke-dasharray={taskChartData}
+                                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                        <text x="18" y="20.35" class="percentage">{taskCompletionRate}%</text>
+                                    </svg>
+                                    <div class="chart-legend">
+                                        <div class="legend-item"><span class="dot completed"></span> Data:
+                                            {taskStats.Completed}/{metrics.totalTasks}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 2. Upcoming Deadlines (Animated SVG Donut with Gradient) -->
+                            <div class="overview-card chart-container">
+                                <h3>Deadlines Status</h3>
+                                <div class="chart-content column-layout">
+                                    <svg viewBox="0 0 36 36" class="circular-chart">
+                                        <!-- Background Circle -->
+                                        <path class="circle-bg"
+                                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+
+                                        <!-- Urgent Segment (Red, Starts at top) -->
+                                        <path class="circle" stroke-dasharray={deadlineUrgentStroke} stroke="#ef4444"
+                                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+
+                                        <!-- Upcoming Segment (Orange, Starts after Red) -->
+                                        <path class="circle" stroke-dasharray={deadlineUpcomingStroke}
+                                            stroke-dashoffset={deadlineUpcomingOffset} stroke="#f59e0b"
+                                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+
+
+                                    </svg>
+
+                                    <div class="chart-legend-horizontal">
+                                        <div class="legend-item"><span class="dot rejected"></span> Urgent:
+                                            {deadlineStats.Urgent}</div>
+                                        <div class="legend-item"><span class="dot pending"></span> Upcoming:
+                                            {deadlineStats.Upcoming}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 3. Task Priority (Stacked Bar with Gradient) -->
+                            <div class="overview-card chart-container">
+                                <h3>Task Priority</h3>
+                                <div class="priority-chart-container">
+                                    <div class="stacked-bar">
+                                        <div class="stack-segment high" style={priorityHighStyle} title="High"></div>
+                                        <div class="stack-segment medium" style={priorityMedStyle} title="Medium"></div>
+                                        <div class="stack-segment low" style={priorityLowStyle} title="Low"></div>
+                                    </div>
+                                    <div class="chart-legend-horizontal">
+                                        <div class="legend-item"><span class="dot high"></span> High:
+                                            {priorityStats.High}</div>
+                                        <div class="legend-item"><span class="dot medium"></span> Med:
+                                            {priorityStats.Medium}</div>
+                                        <div class="legend-item"><span class="dot low"></span> Low: {priorityStats.Low}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Info Grid (Activity, Top Performers) -->
+                        <div class="info-grid-3"
+                            style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 2rem;">
+                            <!-- Recent Activity -->
+                            <div class="overview-card activity-feed">
+                                <h3>Recent Updates <!-- v2 --></h3>
+                                <div class="activity-list">
+                                    <template for:each={activities} for:item="act">
+                                        <div key={act.id} class="activity-item">
+                                            <div class="activity-content">
+                                                <p class="activity-text">{act.message}</p>
+                                                <span class="activity-time">{act.activityDate}</span>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <!-- Top Performers -->
+                            <div class="overview-card">
+                                <h3>Top Performers 🏆</h3>
+                                <div class="leaderboard-list">
+                                    <template for:each={topInterns} for:item="intern" for:index="index">
+                                        <div key={intern.id} class="leaderboard-item">
+                                            <span class="rank">#{intern.rank}</span>
+                                            <div class="intern-info">
+                                                <p class="name">{intern.name}</p>
+                                                <p class="score">{intern.completedTasks} Tasks Completed</p>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <template if:false={topInterns.length}>
+                                        <p class="empty-state">No completed tasks yet.</p>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </template>
+
+                <!-- INTERNS VIEW -->
+                <template if:true={isInternsTab}>
+                    <div class="card-glass">
+                        <div class="action-header slds-grid slds-grid_vertical-align-center slds-m-bottom_medium">
+                            <!-- Left: Total Count -->
+                            <div class="slds-col slds-size_1-of-3 slds-grid slds-grid_vertical-align-center">
+                                <span class="record-badge">Total: {totalInternsCount}</span>
+                            </div>
+
+                            <!-- Center Title -->
+                            <div class="slds-col slds-size_1-of-3 slds-text-align_center">
+                                <h2 class="section-title">Intern Management</h2>
+                                <p class="section-subtitle">View and manage registered interns</p>
+                            </div>
+
+                            <!-- Right Actions (Placeholder for alignment) -->
+                            <div class="slds-col slds-size_1-of-3 slds-text-align_right">
+                            </div>
+                        </div>
+
+                        <!-- Filter Section for Interns -->
+                        <div class="filter-container slds-m-bottom_medium">
+                            <div class="filter-input-group">
+                                <input type="text" placeholder="Filter by Name" value={filterInternName}
+                                    data-field="internName" oninput={handleInternFilterChange}
+                                    class="filter-input-premium" />
+                                <input type="text" placeholder="Filter by Email" value={filterInternEmail}
+                                    data-field="internEmail" oninput={handleInternFilterChange}
+                                    class="filter-input-premium" />
+                                <input type="text" placeholder="Roll Number" value={filterInternRoll}
+                                    data-field="internRoll" oninput={handleInternFilterChange}
+                                    class="filter-input-premium" />
+                                <input type="text" placeholder="College Name" value={filterInternCollege}
+                                    data-field="internCollege" oninput={handleInternFilterChange}
+                                    class="filter-input-premium" />
+                            </div>
+                        </div>
+
+                        <div class="table-container">
+                            <table class="styled-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Phone</th>
+                                        <th>Roll Number</th>
+                                        <th>College Name</th>
+                                        <th>Address</th>
+                                        <template if:true={isSuperAdmin}>
+                                            <th>Team Lead</th>
+                                        </template>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template for:each={visibleInterns} for:item="row">
+                                        <tr key={row.Id}>
+                                            <td>{row.Name}</td>
+                                            <td><a href={row.mailtoEmail}>{row.Email__c}</a></td>
+                                            <td>{row.Phone__c}</td>
+                                            <td>{row.Roll_Number__c}</td>
+                                            <td>{row.College_Name__c}</td>
+                                            <td>{row.Address__c}</td>
+                                            <template if:true={isSuperAdmin}>
+                                                <td>{row.TeamLeadName}</td>
+                                            </template>
+                                            <td>
+                                                <button class="action-icon-btn delete" onclick={handleInternAction}
+                                                    data-id={row.Id} data-action="delete" title="Delete">
+                                                    <lightning-icon icon-name="utility:delete" size="x-small"
+                                                        class="slds-icon-text-error"></lightning-icon>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="pagination-footer slds-grid slds-grid_align-spread slds-grid_vertical-align-center">
+                            <div class="record-count">Total Records: {totalInternsCount}</div>
+                            <div class="slds-grid slds-grid_vertical-align-center">
+                                <lightning-button label="Previous" onclick={handlePrev} data-tab="interns"
+                                    disabled={isInternsFirstPage} variant="neutral"
+                                    class="slds-m-right_x-small"></lightning-button>
+                                <span class="page-info slds-m-horizontal_small">Page {currentPageInterns} of
+                                    {totalInternsPages}</span>
+                                <lightning-button label="Next" onclick={handleNext} data-tab="interns"
+                                    disabled={isInternsLastPage} variant="neutral"
+                                    class="slds-m-left_x-small"></lightning-button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- LEAVES VIEW REMOVED -->
+
+                <!-- MENTORSHIP VIEW -->
+                <template if:true={isMentorshipTab}>
+                    <div class="card-glass">
+                        <div class="action-header slds-grid slds-grid_vertical-align-center slds-m-bottom_medium">
+                            <!-- Left: Total Count -->
+                            <div class="slds-col slds-size_1-of-3 slds-grid slds-grid_vertical-align-center">
+                                <span class="record-badge">Total: {totalMentorshipCount}</span>
+                            </div>
+
+                            <!-- Center Title -->
+                            <div class="slds-col slds-size_1-of-3 slds-text-align_center">
+                                <h2 class="section-title">Mentorship Requests</h2>
+                                <p class="section-subtitle">Provide guidance and reply to intern queries</p>
+                            </div>
+
+                            <!-- Right Actions (Placeholder for alignment) -->
+                            <div class="slds-col slds-size_1-of-3 slds-text-align_right">
+                            </div>
+                        </div>
+
+                        <!-- Filter Section for Mentorship -->
+                        <div class="filter-container slds-m-bottom_medium">
+                            <div class="filter-input-group">
+                                <input type="text" placeholder="Filter by Intern Name"
+                                    value={filterMentorshipInternName} data-field="mentorshipInternName"
+                                    oninput={handleMentorshipFilterChange} class="filter-input-premium" />
+                                <select class="filter-input-premium" data-field="mentorshipType"
+                                    onchange={handleMentorshipFilterChange}>
+                                    <option value="">All Types</option>
+                                    <option value="General">General</option>
+                                    <option value="Technical">Technical</option>
+                                    <option value="HR">HR</option>
+                                    <option value="Project">Project</option>
+                                </select>
+                                <select class="filter-input-premium" data-field="mentorshipStatus"
+                                    onchange={handleMentorshipFilterChange}>
+                                    <option value="">All Status</option>
+                                    <option value="Pending">Pending</option>
+                                    <option value="Replied">Replied</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="table-container">
+                            <table class="styled-table">
+                                <thead>
+                                    <tr>
+                                        <th>Intern</th>
+                                        <th>Type</th>
+                                        <th>Status</th>
+                                        <th>Description</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template for:each={visibleMentorships} for:item="row">
+                                        <tr key={row.Id}>
+                                            <td>{row.InternName}</td>
+                                            <td>{row.Request_Type__c}</td>
+                                            <td><span class={row.statusClass}>{row.Status__c}</span></td>
+                                            <td>{row.Description__c}</td>
+                                            <td>
+                                                <button class="action-icon-btn" onclick={handleMentorshipAction}
+                                                    data-id={row.Id} data-action="reply" title="Reply">
+                                                    <lightning-icon icon-name="utility:reply"
+                                                        size="x-small"></lightning-icon>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="pagination-footer slds-grid slds-grid_align-spread slds-grid_vertical-align-center">
+                            <div class="record-count">Total Records: {totalMentorshipCount}</div>
+                            <div class="slds-grid slds-grid_vertical-align-center">
+                                <lightning-button label="Previous" onclick={handlePrev} data-tab="mentorship"
+                                    disabled={isMentorshipFirstPage} variant="neutral"
+                                    class="slds-m-right_x-small"></lightning-button>
+                                <span class="page-info slds-m-horizontal_small">Page {currentPageMentorship} of
+                                    {totalMentorshipPages}</span>
+                                <lightning-button label="Next" onclick={handleNext} data-tab="mentorship"
+                                    disabled={isMentorshipLastPage} variant="neutral"
+                                    class="slds-m-left_x-small"></lightning-button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- LOGS VIEW -->
+                <template if:true={isLogsTab}>
+                    <div class="card-glass">
+                        <div class="action-header slds-grid slds-grid_vertical-align-center slds-m-bottom_medium">
+                            <!-- Left: Total Count -->
+                            <div class="slds-col slds-size_1-of-3 slds-grid slds-grid_vertical-align-center">
+                                <span class="record-badge">Total: {totalLogsCount}</span>
+                            </div>
+
+                            <!-- Center Title -->
+                            <div class="slds-col slds-size_1-of-3 slds-text-align_center">
+                                <h2 class="section-title">Intern Diary</h2>
+                                <p class="section-subtitle">Track daily work logs and learning progress</p>
+                            </div>
+
+                            <!-- Right Actions -->
+                            <div class="slds-col slds-size_1-of-3 slds-text-align_right">
+                            </div>
+                        </div>
+
+                        <!-- Diary Filters -->
+                        <div class="filter-container slds-m-bottom_medium">
+                            <div class="filter-input-group">
+                                <input type="text" placeholder="Search Intern Name..." value={logFilterInternName}
+                                    data-field="internName" oninput={handleLogFilterChange}
+                                    class="filter-input-premium" />
+
+                                <select class="filter-input-premium" data-field="course"
+                                    onchange={handleLogFilterChange}>
+                                    <template for:each={courseOptions} for:item="opt">
+                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                    </template>
+                                </select>
+
+                                <select class="filter-input-premium" data-field="module"
+                                    onchange={handleLogFilterChange}>
+                                    <template for:each={moduleOptions} for:item="opt">
+                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                    </template>
+                                </select>
+
+                                <select class="filter-input-premium" data-field="topic"
+                                    onchange={handleLogFilterChange}>
+                                    <template for:each={topicOptions} for:item="opt">
+                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                    </template>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table class="styled-table">
+                                <thead>
+                                    <tr>
+                                        <th>Intern</th>
+                                        <th>Date</th>
+                                        <th>Course</th>
+                                        <th>Module</th>
+                                        <th>Topic</th>
+                                        <th>Hours</th>
+                                        <th>Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template for:each={visibleLogs} for:item="row">
+                                        <tr key={row.Id}>
+                                            <td>{row.InternName}</td>
+                                            <td>{row.formattedDate}</td>
+                                            <td>{row.Course__c}</td>
+                                            <td>{row.Module__c}</td>
+                                            <td>{row.Topic__c}</td>
+                                            <td>{row.Hours_Spent__c}</td>
+                                            <td>{row.Work_Description__c}</td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="pagination-footer slds-grid slds-grid_align-spread slds-grid_vertical-align-center">
+                            <div class="record-count">Total Records: {totalLogsCount}</div>
+                            <div class="slds-grid slds-grid_vertical-align-center">
+                                <lightning-button label="Previous" onclick={handlePrev} data-tab="logs"
+                                    disabled={isLogsFirstPage} variant="neutral"
+                                    class="slds-m-right_x-small"></lightning-button>
+                                <span class="page-info slds-m-horizontal_small">Page {currentPageLogs} of
+                                    {totalLogsPages}</span>
+                                <lightning-button label="Next" onclick={handleNext} data-tab="logs"
+                                    disabled={isLogsLastPage} variant="neutral"
+                                    class="slds-m-left_x-small"></lightning-button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- ANNOUNCEMENTS VIEW -->
+                <template if:true={isAnnouncementsTab}>
+                    <div class="card-glass">
+                        <div class="action-header slds-grid slds-grid_vertical-align-center slds-m-bottom_medium">
+                            <!-- Left: Total Count -->
+                            <div class="slds-col slds-size_1-of-3 slds-grid slds-grid_vertical-align-center">
+                                <span class="record-badge">Total: {totalAnnouncementsCount}</span>
+                            </div>
+
+                            <!-- Center Title -->
+                            <div class="slds-col slds-size_1-of-3 slds-text-align_center">
+                                <h2 class="section-title">Announcements</h2>
+                                <p class="section-subtitle">Broadcast updates and news to interns</p>
+                            </div>
+
+                            <!-- Right Actions -->
+                            <div class="slds-col slds-size_1-of-3 slds-text-align_right">
+                                <lightning-button label="New Announcement" onclick={openAnnouncementModal}
+                                    variant="brand" icon-name="utility:add" class="add-btn"></lightning-button>
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table class="styled-table">
+                                <thead>
+                                    <tr>
+                                        <th>Message</th>
+                                        <th>Type</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template for:each={visibleAnnouncements} for:item="row">
+                                        <tr key={row.Id}>
+                                            <td>{row.Message__c}</td>
+                                            <td><span class={row.typeClass}>{row.Type__c}</span></td>
+                                            <td>
+                                                <button class="action-icon-btn delete"
+                                                    onclick={handleAnnouncementAction} data-id={row.Id}
+                                                    data-action="delete" title="Delete">
+                                                    <lightning-icon icon-name="utility:delete" size="x-small"
+                                                        class="slds-icon-text-error"></lightning-icon>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="pagination-footer slds-grid slds-grid_align-spread slds-grid_vertical-align-center">
+                            <div class="record-count">Total Records: {totalAnnouncementsCount}</div>
+                            <div class="slds-grid slds-grid_vertical-align-center">
+                                <lightning-button label="Previous" onclick={handlePrev} data-tab="announcements"
+                                    disabled={isAnnouncementsFirstPage} variant="neutral"
+                                    class="slds-m-right_x-small"></lightning-button>
+                                <span class="page-info slds-m-horizontal_small">Page {currentPageAnnouncements} of
+                                    {totalAnnouncementsPages}</span>
+                                <lightning-button label="Next" onclick={handleNext} data-tab="announcements"
+                                    disabled={isAnnouncementsLastPage} variant="neutral"
+                                    class="slds-m-left_x-small"></lightning-button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- RESOURCES VIEW -->
+                <template if:true={isResourcesTab}>
+                    <div class="card-glass">
+                        <div class="action-header slds-grid slds-grid_vertical-align-center slds-m-bottom_medium">
+                            <!-- Left: Total Count -->
+                            <div class="slds-col slds-size_1-of-3 slds-grid slds-grid_vertical-align-center">
+                                <span class="record-badge">Total: {totalResourcesCount}</span>
+                            </div>
+
+                            <!-- Center Title -->
+                            <div class="slds-col slds-size_1-of-3 slds-text-align_center">
+                                <h2 class="section-title">Learning Resources</h2>
+                                <p class="section-subtitle">Manage educational materials and links</p>
+                            </div>
+
+                            <!-- Right Actions -->
+                            <div class="slds-col slds-size_1-of-3 slds-text-align_right">
+                                <lightning-button label="New Resource" onclick={openResourceModal} variant="brand"
+                                    icon-name="utility:add" class="add-btn"></lightning-button>
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table class="styled-table">
+                                <thead>
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Link</th>
+                                        <th>Type</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template for:each={visibleResources} for:item="row">
+                                        <tr key={row.Id}>
+                                            <td>{row.Title__c}</td>
+                                            <td><a href={row.Link__c} target="_blank">Open Link</a></td>
+                                            <td><span class={row.typeClass}>{row.Type__c}</span></td>
+                                            <td>
+                                                <button class="action-icon-btn delete" onclick={handleResourceAction}
+                                                    data-id={row.Id} data-action="delete" title="Delete">
+                                                    <lightning-icon icon-name="utility:delete" size="x-small"
+                                                        class="slds-icon-text-error"></lightning-icon>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="pagination-footer slds-grid slds-grid_align-spread slds-grid_vertical-align-center">
+                            <div class="record-count">Total Records: {totalResourcesCount}</div>
+                            <div class="slds-grid slds-grid_vertical-align-center">
+                                <lightning-button label="Previous" onclick={handlePrev} data-tab="resources"
+                                    disabled={isResourcesFirstPage} variant="neutral"
+                                    class="slds-m-right_x-small"></lightning-button>
+                                <span class="page-info slds-m-horizontal_small">Page {currentPageResources} of
+                                    {totalResourcesPages}</span>
+                                <lightning-button label="Next" onclick={handleNext} data-tab="resources"
+                                    disabled={isResourcesLastPage} variant="neutral"
+                                    class="slds-m-left_x-small"></lightning-button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- TASKS VIEW -->
+                <template if:true={isTasksTab}>
+                    <div class="card-glass">
+                        <!-- Header with Add Button -->
+                        <!-- Header with Add Button -->
+                        <div class="action-header slds-grid slds-grid_vertical-align-center slds-m-bottom_medium">
+                            <!-- Left: Total Count -->
+                            <div class="slds-col slds-size_1-of-3 slds-grid slds-grid_vertical-align-center">
+                                <span class="record-badge">Total: {totalRecords}</span>
+                            </div>
+
+                            <!-- Center Title -->
+                            <div class="slds-col slds-size_1-of-3 slds-text-align_center">
+                                <h2 class="section-title">Task Management</h2>
+                                <p class="section-subtitle">Manage and track intern assignments</p>
+                            </div>
+
+                            <!-- Right Actions -->
+                            <div class="slds-col slds-size_1-of-3 slds-text-align_right">
+                                <lightning-button label="Assign New Task" onclick={openTaskModal} variant="brand"
+                                    icon-name="utility:add" class="add-btn"></lightning-button>
+                            </div>
+                        </div>
+
+                        <!-- Filter Section -->
+                        <div class="filter-container slds-m-bottom_medium">
+                            <div class="filter-input-group">
+                                <input type="text" placeholder="Filter by Task Name" value={filterTaskName}
+                                    data-field="taskName" oninput={handleFilterChange} class="filter-input-premium" />
+                                <input type="text" placeholder="Filter by Intern Name" value={filterInternName}
+                                    data-field="internName" oninput={handleFilterChange} class="filter-input-premium" />
+                                <select class="filter-input-premium" data-field="status" onchange={handleFilterChange}>
+                                    <template for:each={statusOptions} for:item="opt">
+                                        <option key={opt.value} value={opt.value} selected={opt.selected}>
+                                            {opt.label}</option>
+                                    </template>
+                                </select>
+                                <input type="date" class="filter-input-premium date-input-premium" data-field="dueDate"
+                                    onchange={handleFilterChange} value={filterDate} placeholder="Due Date" />
+                                <button class="action-icon-btn refresh-btn" onclick={resetFilters} title="Reset">
+                                    <lightning-icon icon-name="utility:refresh" size="x-small"></lightning-icon>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Task Table -->
+                        <div class="table-container">
+                            <table class="styled-table">
+                                <thead>
+                                    <tr>
+                                        <th>Task Name</th>
+                                        <th>Assigned To</th>
+                                        <th>Priority</th>
+                                        <th>Due Date</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template for:each={tasks} for:item="row">
+                                        <tr key={row.Id}>
+                                            <td>{row.Name}</td>
+                                            <td>{row.InternName}</td>
+                                            <td>{row.Priority__c}</td>
+                                            <td>{row.formattedDate}</td>
+                                            <td><span class={row.statusClass}>{row.Status__c}</span></td>
+                                            <td>
+                                                <div class="action-btn-group">
+                                                    <button class="action-icon-btn" onclick={handleTaskAction}
+                                                        data-id={row.Id} data-action="edit" title="Edit">
+                                                        <lightning-icon icon-name="utility:edit"
+                                                            size="x-small"></lightning-icon>
+                                                    </button>
+                                                    <button class="action-icon-btn delete" onclick={handleTaskAction}
+                                                        data-id={row.Id} data-action="delete" title="Delete">
+                                                        <lightning-icon icon-name="utility:delete" size="x-small"
+                                                            class="slds-icon-text-error"></lightning-icon>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        <div class="pagination-footer slds-grid slds-grid_align-spread slds-grid_vertical-align-center">
+                            <div class="record-count">Total Records: {totalRecords}</div>
+                            <div class="slds-grid slds-grid_vertical-align-center">
+                                <lightning-button label="Previous" onclick={handlePreviousPage} disabled={isFirstPage}
+                                    variant="neutral" class="slds-m-right_x-small"></lightning-button>
+                                <span class="page-info slds-m-horizontal_small">Page {currentPage} of
+                                    {totalPages}</span>
+                                <lightning-button label="Next" onclick={handleNextPage} disabled={isLastPage}
+                                    variant="neutral" class="slds-m-left_x-small"></lightning-button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+            </div>
+        </main>
+
+        <!-- Mentorship Reply Modal -->
+        <template if:true={isMentorshipModalOpen}>
+            <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                        <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"
+                            title="Close" onclick={closeMentorshipModal}>
+                            <lightning-icon icon-name="utility:close" alternative-text="close" variant="inverse"
+                                size="small"></lightning-icon>
+                        </button>
+                        <h2 class="slds-text-heading_medium">Reply to Request</h2>
+                    </header>
+                    <div class="slds-modal__content slds-p-around_medium custom-scrollbar">
+                        <div class="slds-form">
+                            <!-- Response Input -->
+                            <div class="premium-input-wrapper">
+                                <label class="premium-input-label">* Mentor Response</label>
+                                <textarea class={mentorResponseClass} rows="4" oninput={handleResponseChangeCustom}
+                                    placeholder="Enter your feedback or reply...">{mentorResponse}</textarea>
+                                <template if:true={mentorErrors.response}>
+                                    <div class="input-error-msg">Response is required</div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                    <footer class="slds-modal__footer" style="border-top: 1px solid #f1f5f9; background: #fafafa;">
+                        <button class="btn-premium-secondary slds-m-right_small"
+                            onclick={closeMentorshipModal}>Cancel</button>
+                        <button class="btn-premium-primary" onclick={saveMentorshipReply}>Send Reply</button>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </template>
+
+        <!-- Announcement Modal -->
+        <template if:true={isAnnouncementModalOpen}>
+            <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                        <h2 class="slds-text-heading_medium">New Announcement</h2>
+                    </header>
+                    <div class="slds-modal__content slds-p-around_medium custom-scrollbar">
+                        <div class="slds-form">
+                            <!-- Message Input -->
+                            <div class="premium-input-wrapper">
+                                <label class="premium-input-label">* Announcement Message</label>
+                                <textarea class={announcementMessageClass} rows="4" data-field="Message__c"
+                                    oninput={handleAnnouncementInputChangeCustom}
+                                    placeholder="Enter message...">{announcementForm.Message__c}</textarea>
+                                <template if:true={announcementErrors.message}>
+                                    <div class="input-error-msg">Message is required</div>
+                                </template>
+                            </div>
+
+                            <!-- Type Select -->
+                            <div class="premium-input-wrapper">
+                                <label class="premium-input-label">Type</label>
+                                <select class="premium-input" data-field="Type__c"
+                                    onchange={handleAnnouncementInputChangeCustom}>
+                                    <template for:each={announcementTypeOptionsComputed} for:item="option">
+                                        <option key={option.value} value={option.value} selected={option.selected}>
+                                            {option.label}</option>
+                                    </template>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <footer class="slds-modal__footer" style="border-top: 1px solid #f1f5f9; background: #fafafa;">
+                        <button class="btn-premium-secondary slds-m-right_small"
+                            onclick={closeAnnouncementModal}>Cancel</button>
+                        <button class="btn-premium-primary" onclick={saveAnnouncementRecord}>Save Announcement</button>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </template>
+
+        <!-- Resource Modal -->
+        <template if:true={isResourceModalOpen}>
+            <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                        <h2 class="slds-text-heading_medium">New Resource</h2>
+                    </header>
+                    <div class="slds-modal__content slds-p-around_medium custom-scrollbar">
+                        <div class="slds-form">
+                            <!-- Title Input -->
+                            <div class="premium-input-wrapper">
+                                <label class="premium-input-label">* Title</label>
+                                <input type="text" class={resourceTitleClass} value={resourceForm.Title__c}
+                                    data-field="Title__c" oninput={handleResourceInputChangeCustom}
+                                    placeholder="Resource Title..." />
+                                <template if:true={resourceErrors.title}>
+                                    <div class="input-error-msg">Title is required</div>
+                                </template>
+                            </div>
+
+                            <!-- Link Input -->
+                            <div class="premium-input-wrapper">
+                                <label class="premium-input-label">* Link URL</label>
+                                <input type="url" class={resourceLinkClass} value={resourceForm.Link__c}
+                                    data-field="Link__c" oninput={handleResourceInputChangeCustom}
+                                    placeholder="https://..." />
+                                <template if:true={resourceErrors.link}>
+                                    <div class="input-error-msg">Link is required</div>
+                                </template>
+                            </div>
+
+                            <!-- Type Select -->
+                            <div class="premium-input-wrapper">
+                                <label class="premium-input-label">Type</label>
+                                <select class="premium-input" data-field="Type__c"
+                                    onchange={handleResourceInputChangeCustom}>
+                                    <template for:each={resourceTypeOptionsComputed} for:item="option">
+                                        <option key={option.value} value={option.value} selected={option.selected}>
+                                            {option.label}</option>
+                                    </template>
+                                </select>
+                            </div>
+
+                            <!-- Description -->
+                            <div class="premium-input-wrapper">
+                                <label class="premium-input-label">Description</label>
+                                <textarea class="premium-input" rows="3" data-field="Description__c"
+                                    oninput={handleResourceInputChangeCustom}
+                                    placeholder="Optional details...">{resourceForm.Description__c}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <footer class="slds-modal__footer" style="border-top: 1px solid #f1f5f9; background: #fafafa;">
+                        <button class="btn-premium-secondary slds-m-right_small"
+                            onclick={closeResourceModal}>Cancel</button>
+                        <button class="btn-premium-primary" onclick={saveResourceRecord}>Save Resource</button>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </template>
+
+        <!-- SYLLABUS TAB -->
+        <template if:true={isSyllabusTab}>
+            <div class="card-glass">
+                <div class="action-header slds-grid slds-grid_vertical-align-center slds-m-bottom_medium">
+                    <!-- Left: Total Count -->
+                    <div class="slds-col slds-size_1-of-3 slds-grid slds-grid_vertical-align-center">
+                        <span class="record-badge">Total: {totalSyllabusCount}</span>
+                    </div>
+
+                    <!-- Center Title -->
+                    <div class="slds-col slds-size_1-of-3 slds-text-align_center">
+                        <h2 class="section-title">Course Syllabus</h2>
+                        <p class="section-subtitle">Structure the learning curriculum</p>
+                    </div>
+
+                    <!-- Right Actions -->
+                    <div class="slds-col slds-size_1-of-3 slds-text-align_right">
+                        <lightning-button label="Add Topic" onclick={openSyllabusModal} variant="brand"
+                            icon-name="utility:add" class="add-btn"></lightning-button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="styled-table">
+                        <thead>
+                            <tr>
+                                <th>Course</th>
+                                <th>Module</th>
+                                <th>Topic</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template for:each={visibleSyllabus} for:item="row">
+                                <tr key={row.Id}>
+                                    <td>{row.Course_Name__c}</td>
+                                    <td>{row.Module_Name__c}</td>
+                                    <td>{row.Topic_Name__c}</td>
+                                    <td>
+                                        <div class="action-btn-group">
+                                            <button class="action-icon-btn" onclick={handleSyllabusAction}
+                                                data-id={row.Id} data-action="edit" title="Edit">
+                                                <lightning-icon icon-name="utility:edit"
+                                                    size="x-small"></lightning-icon>
+                                            </button>
+                                            <button class="action-icon-btn delete" onclick={handleSyllabusAction}
+                                                data-id={row.Id} data-action="delete" title="Delete">
+                                                <lightning-icon icon-name="utility:delete" size="x-small"
+                                                    class="slds-icon-text-error"></lightning-icon>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination-footer slds-grid slds-grid_align-spread slds-grid_vertical-align-center">
+                    <div class="record-count">Total Records: {totalSyllabusCount}</div>
+                    <div class="slds-grid slds-grid_vertical-align-center">
+                        <lightning-button label="Previous" onclick={handlePrev} data-tab="syllabus"
+                            disabled={isSyllabusFirstPage} variant="neutral"
+                            class="slds-m-right_x-small"></lightning-button>
+                        <span class="page-info slds-m-horizontal_small">Page {currentPageSyllabus} of
+                            {totalSyllabusPages}</span>
+                        <lightning-button label="Next" onclick={handleNext} data-tab="syllabus"
+                            disabled={isSyllabusLastPage} variant="neutral"
+                            class="slds-m-left_x-small"></lightning-button>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+
+        <!-- Syllabus Modal -->
+        <template if:true={isSyllabusModalOpen}>
+            <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                        <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"
+                            title="Close" onclick={closeSyllabusModal}>
+                            <lightning-icon icon-name="utility:close" alternative-text="close" variant="inverse"
+                                size="small"></lightning-icon>
+                        </button>
+                        <h2 class="slds-text-heading_medium">{syllabusModalTitle}</h2>
+                    </header>
+                    <div class="slds-modal__content slds-p-around_medium custom-scrollbar">
+                        <div class="slds-form">
+                            <div class="premium-input-wrapper">
+                                <label class="premium-input-label">* Course Name</label>
+                                <input type="text" class="premium-input" data-field="Course_Name__c"
+                                    value={syllabusForm.Course_Name__c} oninput={handleSyllabusInputChange} />
+                            </div>
+                            <div class="premium-input-wrapper">
+                                <label class="premium-input-label">* Module Name</label>
+                                <input type="text" class="premium-input" data-field="Module_Name__c"
+                                    value={syllabusForm.Module_Name__c} oninput={handleSyllabusInputChange} />
+                            </div>
+                            <div class="premium-input-wrapper">
+                                <label class="premium-input-label">* Topic Name</label>
+                                <input type="text" class="premium-input" data-field="Topic_Name__c"
+                                    value={syllabusForm.Topic_Name__c} oninput={handleSyllabusInputChange} />
+                            </div>
+                        </div>
+                    </div>
+                    <footer class="slds-modal__footer" style="border-top: 1px solid #f1f5f9; background: #fafafa;">
+                        <button class="btn-premium-secondary slds-m-right_small"
+                            onclick={closeSyllabusModal}>Cancel</button>
+                        <button class="btn-premium-primary" onclick={saveSyllabusRecord}>Save</button>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </template>
+
+        <!-- New Intern Modal -->
+        <template if:true={isInternModalOpen}>
+            <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                        <h2 class="slds-text-heading_medium">Register New Intern</h2>
+                    </header>
+                    <div class="slds-modal__content slds-p-around_medium custom-scrollbar">
+                        <div class="slds-form">
+                            <!-- Name -->
+                            <div class="premium-input-wrapper">
+                                <label class="premium-input-label">* Full Name</label>
+                                <input type="text" class={internNameClass} value={internForm.Name} data-field="Name"
+                                    oninput={handleInternInputChange} placeholder="John Doe" />
+                                <template if:true={internErrors.name}>
+                                    <div class="input-error-msg">Name is required</div>
+                                </template>
+                            </div>
+
+                            <div class="slds-grid slds-gutters">
+                                <div class="slds-col slds-size_1-of-2">
+                                    <!-- Email -->
+                                    <div class="premium-input-wrapper">
+                                        <label class="premium-input-label">* Email</label>
+                                        <input type="email" class={internEmailClass} value={internForm.Email__c}
+                                            data-field="Email__c" oninput={handleInternInputChange}
+                                            placeholder="john@example.com" />
+                                        <template if:true={internErrors.email}>
+                                            <div class="input-error-msg">Email is required</div>
+                                        </template>
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2">
+                                    <!-- Phone -->
+                                    <div class="premium-input-wrapper">
+                                        <label class="premium-input-label">Phone</label>
+                                        <input type="tel" class="premium-input" value={internForm.Phone__c}
+                                            data-field="Phone__c" oninput={handleInternInputChange}
+                                            placeholder="+123..." />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="slds-grid slds-gutters">
+                                <div class="slds-col slds-size_1-of-2">
+                                    <!-- College -->
+                                    <div class="premium-input-wrapper">
+                                        <label class="premium-input-label">College</label>
+                                        <input type="text" class="premium-input" value={internForm.College_Name__c}
+                                            data-field="College_Name__c" oninput={handleInternInputChange}
+                                            placeholder="University..." />
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2">
+                                    <!-- Roll No -->
+                                    <div class="premium-input-wrapper">
+                                        <label class="premium-input-label">Roll Number</label>
+                                        <input type="text" class="premium-input" value={internForm.Roll_Number__c}
+                                            data-field="Roll_Number__c" oninput={handleInternInputChange}
+                                            placeholder="123456" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <footer class="slds-modal__footer" style="border-top: 1px solid #f1f5f9; background: #fafafa;">
+                        <button class="btn-premium-secondary slds-m-right_small"
+                            onclick={closeInternModal}>Cancel</button>
+                        <button class="btn-premium-primary" onclick={saveInternRecord}>Register Intern</button>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </template>
+
+        <!-- Task Management Modal -->
+        <template if:true={isTaskModalOpen}>
+            <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                        <h2 class="slds-text-heading_medium">{taskModalTitle}</h2>
+                    </header>
+                    <div class="slds-modal__content slds-p-around_medium custom-scrollbar">
+                        <div class="slds-form">
+                            <!-- Custom Task Name Input -->
+                            <div class="premium-input-wrapper">
+                                <label class="premium-input-label">* Task Name</label>
+                                <input type="text" class={nameInputClass} value={taskForm.Name} data-field="Name"
+                                    oninput={handleTaskInputChangeCustom} placeholder="Enter task name..." />
+                                <template if:true={errors.name}>
+                                    <div class="input-error-msg">Task Name is required</div>
+                                </template>
+                            </div>
+
+                            <div class="slds-grid slds-gutters">
+                                <div class="slds-col slds-size_1-of-2">
+                                    <!-- Custom Due Date Input -->
+                                    <div class="premium-input-wrapper">
+                                        <label class="premium-input-label">* Due Date</label>
+                                        <input type="date" class={dateInputClass} value={taskForm.Due_Date__c}
+                                            data-field="Due_Date__c" onchange={handleTaskInputChangeCustom} />
+                                        <template if:true={errors.date}>
+                                            <div class="input-error-msg">Due Date is required</div>
+                                        </template>
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2">
+                                    <!-- Priority Select (Styled as Input) -->
+                                    <div class="premium-input-wrapper">
+                                        <label class="premium-input-label">Priority</label>
+                                        <select class="premium-input" data-field="Priority__c"
+                                            onchange={handleTaskInputChangeCustom}>
+                                            <template for:each={priorityOptions} for:item="option">
+                                                <option key={option.value} value={option.value}
+                                                    selected={option.selected}>
+                                                    {option.label}</option>
+                                            </template>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="premium-input-wrapper">
+                                <label class="premium-input-label">Description</label>
+                                <textarea class="premium-input" rows="3" data-field="Description__c"
+                                    oninput={handleTaskInputChangeCustom}
+                                    placeholder="Task details...">{taskForm.Description__c}</textarea>
+                            </div>
+
+                            <!-- Enhanced Assign To Selection (Grid) -->
+                            <div class="slds-form-element">
+                                <div class="slds-grid slds-grid_vertical-align-center slds-m-bottom_small">
+                                    <label class="premium-input-label slds-m-bottom_none slds-m-right_small">Assign
+                                        To</label>
+                                    <template if:true={errors.assign}>
+                                        <div class="input-error-msg slds-m-right_small">Please select an intern</div>
+                                    </template>
+                                    <div class="slds-col_bump-left">
+                                        <label class="slds-checkbox_toggle slds-grid">
+                                            <span class="slds-form-element__label slds-m-bottom_none">Select All</span>
+                                            <input type="checkbox" checked={isSelectAll} onchange={handleSelectAll} />
+                                            <span id="toggle-desc" class="slds-checkbox_faux_container"
+                                                aria-live="assertive">
+                                                <span class="slds-checkbox_faux"></span>
+                                                <span class="slds-checkbox_on"></span>
+                                                <span class="slds-checkbox_off"></span>
+                                            </span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="slds-form-element__control">
+                                    <!-- Search Box -->
+                                    <div class="premium-input-wrapper search-wrapper slds-m-bottom_medium">
+                                        <span class="search-icon">
+                                            <lightning-icon icon-name="utility:search" size="x-small"></lightning-icon>
+                                        </span>
+                                        <input type="text" class="premium-input search"
+                                            placeholder="Search interns by name..." value={searchTerm}
+                                            oninput={handleInternSearch} disabled={isSelectAll} />
+                                        <template if:true={searchTerm}>
+                                            <button class="clear-search-btn" onclick={clearSearch}>×</button>
+                                        </template>
+                                    </div>
+
+                                    <!-- List / Grid -->
+                                    <template if:true={isSelectAll}>
+                                        <div class="all-selected-message">
+                                            <lightning-icon icon-name="utility:check" size="small"
+                                                class="slds-m-right_x-small"></lightning-icon>
+                                            All Interns Selected
+                                        </div>
+                                    </template>
+
+                                    <template if:false={isSelectAll}>
+                                        <template if:true={showInternList}>
+                                            <div class="intern-selection-list custom-scrollbar">
+                                                <template for:each={taskInternOptions} for:item="intern">
+                                                    <label key={intern.Id} class={intern.cardClass}>
+                                                        <input type="radio" name="intern_select" value={intern.Id}
+                                                            checked={intern.isChecked} onchange={handleInternSelect} />
+
+                                                        <div class="intern-avatar">
+                                                            {intern.initials}
+                                                        </div>
+                                                        <div class="intern-info">
+                                                            <span class="intern-name">{intern.Name}</span>
+                                                            <span class="intern-role">Intern</span>
+                                                        </div>
+
+                                                        <div class="check-indicator">
+                                                            <lightning-icon icon-name="utility:check" size="xx-small"
+                                                                variant="inverse"></lightning-icon>
+                                                        </div>
+                                                    </label>
+                                                </template>
+                                                <template if:false={taskInternOptions.length}>
+                                                    <div class="empty-state-message">
+                                                        No interns found matching "{searchTerm}"
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </template>
+                                        <template if:false={showInternList}>
+                                            <div class="empty-state-message">
+                                                Type in the search box to find interns...
+                                            </div>
+                                        </template>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <footer class="slds-modal__footer" style="border-top: 1px solid #f1f5f9; background: #fafafa;">
+                        <button class="btn-premium-secondary slds-m-right_small"
+                            onclick={closeTaskModal}>Cancel</button>
+                        <button class="btn-premium-primary" onclick={saveTaskRecord}>Save Task</button>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </template>
+
+    </div>
+</template>
