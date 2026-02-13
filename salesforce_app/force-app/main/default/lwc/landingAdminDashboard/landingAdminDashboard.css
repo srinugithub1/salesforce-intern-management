@@ -1129,3 +1129,97 @@
         margin: 0 -1rem;
     }
 }
+
+/* Session Links Specific Styles */
+.url-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #0176d3;
+    text-decoration: none;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+}
+
+.url-link:hover {
+    color: #014486;
+    text-decoration: underline;
+}
+
+.action-col {
+    width: 120px;
+    text-align: center;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.full-width {
+    grid-column: 1 / -1;
+}
+
+.required-asterisk {
+    color: #c23934;
+    font-weight: bold;
+    margin-right: 2px;
+}
+
+.modal-icon {
+    margin-right: 8px;
+    color: #0176d3;
+}
+
+/* Action buttons hover effects */
+.action-btn.edit:hover {
+    background-color: #e3f2fd;
+    color: #0176d3;
+}
+
+.action-btn.delete:hover {
+    background-color: #ffebee;
+    color: #c23934;
+}
+
+/* Empty State Styling */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    text-align: center;
+    min-height: 400px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    border-radius: 12px;
+    margin: 2rem 0;
+}
+
+.empty-state lightning-icon {
+    margin-bottom: 1.5rem;
+    opacity: 0.6;
+}
+
+.empty-state h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #2c3e50;
+    margin: 0 0 1rem 0;
+    letter-spacing: -0.5px;
+}
+
+.empty-state p {
+    font-size: 1rem;
+    color: #64748b;
+    margin: 0 0 2rem 0;
+    max-width: 400px;
+    line-height: 1.6;
+    font-weight: 400;
+}
+
+.empty-state lightning-button {
+    margin-top: 0.5rem;
+}

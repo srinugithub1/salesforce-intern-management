@@ -51,21 +51,14 @@ public without sharing class InternWorkController {
             if (!openAtts.isEmpty()) {
                 for(Attendance__c att : openAtts) {
                     att.Logout_Time__c = System.now();
+                    // Log Reason if provided (Early Checkout) directly to Status field
+                    if (String.isNotBlank(checkoutReason)) {
+                        att.Status__c = checkoutReason;
+                    } else {
+                        att.Status__c = 'Present'; // Default status if normal checkout
+                    }
                 }
                 update openAtts;
-
-                // Log Reason if provided (Early Checkout)
-                if (String.isNotBlank(checkoutReason)) {
-                    Daily_Log__c log = new Daily_Log__c();
-                    log.Intern__c = intern.Id;
-                    log.Log_Date__c = System.today();
-                    log.Work_Description__c = 'Early Checkout System Note: ' + checkoutReason;
-                    // Calculate partial hours for record keeping?
-                    // Let's just default to 0 to avoid messing up manual logs, or try to be smart.
-                    // For now, 0 or null.
-                    log.Hours_Spent__c = 0; 
-                    insert log;
-                }
 
             } else {
                  throw new AuraHandledException('No active session found to clock out.');
@@ -101,7 +94,7 @@ public without sharing class InternWorkController {
     @AuraEnabled
     public static List<Attendance__c> getAttendanceHistory(String token) {
         Intern__c intern = getInternByToken(token);
-        return [SELECT Id, Login_Time__c, Logout_Time__c 
+        return [SELECT Id, Login_Time__c, Logout_Time__c, Date__c, Working_Hours__c, Status__c 
                 FROM Attendance__c 
                 WHERE Intern__c = :intern.Id 
                 ORDER BY CreatedDate DESC LIMIT 20];
@@ -435,7 +428,7 @@ public without sharing class InternWorkController {
         }
     }
 
-    @AuraEnabled(cacheable=true)
+    @AuraEnabled
     public static List<Daily_Log__c> getDailyLogs(String token) {
         Intern__c intern = getInternByToken(token);
         return [SELECT Id, Log_Date__c, Work_Description__c, Hours_Spent__c, 
@@ -448,9 +441,9 @@ public without sharing class InternWorkController {
 
     @AuraEnabled(cacheable=true)
     public static List<Course_Syllabus__c> getSyllabus() {
-        return [SELECT Id, Course_Name__c, Module_Name__c, Topic_Name__c 
+        return [SELECT Id, Course_Name__c, Module_Name__c 
                 FROM Course_Syllabus__c 
-                ORDER BY Course_Name__c, Module_Name__c, Topic_Name__c];
+                ORDER BY Course_Name__c, Module_Name__c];
     }
 
 
@@ -563,10 +556,25 @@ public without sharing class InternWorkController {
     @AuraEnabled(cacheable=true)
     public static List<Mentorship_Request__c> getMentorshipRequests(String token) {
         Intern__c intern = getInternByToken(token);
-        return [SELECT Id, Request_Type__c, Status__c, Description__c, Mentor_Response__c, CreatedDate 
-                FROM Mentorship_Request__c 
-                WHERE Intern__c = :intern.Id 
-                ORDER BY CreatedDate DESC 
+        return [SELECT Id, Request_Type__c, Status__c, Description__c, Mentor_Response__c, CreatedDate
+                FROM Mentorship_Request__c
+                WHERE Intern__c = :intern.Id
+                ORDER BY CreatedDate DESC
                 LIMIT 20];
+    }
+
+    @AuraEnabled(cacheable=true)
+    public static List<Class_Session_Links__c> getClassSessionLinks() {
+        try {
+            // Fetch upcoming and today's sessions, ordered by date and start time
+            return [SELECT Id, Name, Agenda__c, Date__c, Session_Start__c, Session_End__c,
+                           Session_URL__c, Speaker__c
+                    FROM Class_Session_Links__c
+                    WHERE Date__c >= TODAY
+                    ORDER BY Date__c ASC, Session_Start__c ASC
+                    LIMIT 10];
+        } catch (Exception e) {
+            throw new AuraHandledException(e.getMessage());
+        }
     }
 }

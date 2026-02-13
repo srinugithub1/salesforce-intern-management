@@ -232,58 +232,81 @@
                             </div>
                         </div>
 
-                        <!-- Right: Quick Actions -->
-                        <div class="dash-card quick-actions-card animate-fade-in delay-3">
+                        <!-- Right: Class Session Links Board -->
+                        <div class="dash-card session-links-board animate-fade-in delay-3">
                             <div class="section-header">
-                                <h3>Quick Actions</h3>
+                                <div class="header-title-wrapper">
+                                    <lightning-icon icon-name="utility:video" size="small" class="header-icon"></lightning-icon>
+                                    <h3>Online Class Sessions</h3>
+                                </div>
+                                <span class="live-indicator">
+                                    <span class="pulse-dot"></span>
+                                    Live Links
+                                </span>
                             </div>
-                            <div class="quick-actions-grid">
-                                <button class="quick-action-item qa-blue" onclick={navigateToTasks}>
-                                    <div class="qa-icon">
-                                        <lightning-icon icon-name="utility:task" size="small"></lightning-icon>
-                                    </div>
-                                    <span class="qa-label">My Tasks</span>
-                                </button>
-                                <button class="quick-action-item qa-green" onclick={navigateToDiary}>
-                                    <div class="qa-icon">
-                                        <lightning-icon icon-name="utility:edit" size="small"></lightning-icon>
-                                    </div>
-                                    <span class="qa-label">Write Diary</span>
-                                </button>
-                                <button class="quick-action-item qa-purple" onclick={navigateToResources}>
-                                    <div class="qa-icon">
-                                        <lightning-icon icon-name="utility:knowledge_base"
-                                            size="small"></lightning-icon>
-                                    </div>
-                                    <span class="qa-label">Resources</span>
-                                </button>
-                                <button class="quick-action-item qa-orange" onclick={navigateToProfile}>
-                                    <div class="qa-icon">
-                                        <lightning-icon icon-name="utility:user" size="small"></lightning-icon>
-                                    </div>
-                                    <span class="qa-label">My Profile</span>
-                                </button>
-                                <button class="quick-action-item qa-pink" onclick={navigateToMentorship}>
-                                    <div class="qa-icon">
-                                        <lightning-icon icon-name="utility:groups" size="small"></lightning-icon>
-                                    </div>
-                                    <span class="qa-label">Mentorship</span>
-                                </button>
-                                <template if:false={isClockedIn}>
-                                    <button class="quick-action-item qa-teal" onclick={handleClockIn}>
-                                        <div class="qa-icon">
-                                            <lightning-icon icon-name="utility:clock" size="small"></lightning-icon>
+
+                            <div class="session-links-container">
+                                <template for:each={sessionLinks} for:item="session">
+                                    <div key={session.Id} class="session-link-card" data-color={session.colorClass}>
+                                        <!-- Session Header -->
+                                        <div class="session-card-header">
+                                            <div class="session-date-badge" data-color={session.colorClass}>
+                                                <lightning-icon icon-name="utility:event" size="xx-small"></lightning-icon>
+                                                <span>{session.formattedDate}</span>
+                                            </div>
+                                            <template if:true={session.isToday}>
+                                                <div class="today-badge">
+                                                    <span class="today-pulse"></span>
+                                                    Today
+                                                </div>
+                                            </template>
                                         </div>
-                                        <span class="qa-label">Clock In</span>
-                                    </button>
+
+                                        <!-- Session Content -->
+                                        <div class="session-card-body">
+                                            <div class="session-time-row">
+                                                <div class="time-slot">
+                                                    <lightning-icon icon-name="utility:clock" size="xx-small"></lightning-icon>
+                                                    <span>{session.formattedStartTime} - {session.formattedEndTime}</span>
+                                                </div>
+                                            </div>
+
+                                            <template if:true={session.Speaker__c}>
+                                                <div class="session-speaker">
+                                                    <lightning-icon icon-name="utility:user" size="xx-small"></lightning-icon>
+                                                    <span>{session.Speaker__c}</span>
+                                                </div>
+                                            </template>
+
+                                            <template if:true={session.Agenda__c}>
+                                                <div class="session-agenda">
+                                                    {session.Agenda__c}
+                                                </div>
+                                            </template>
+                                        </div>
+
+                                        <!-- Join Link Button -->
+                                        <div class="session-card-footer">
+                                            <template if:true={session.Session_URL__c}>
+                                                <a href={session.Session_URL__c} target="_blank" class="join-session-btn" data-color={session.colorClass}>
+                                                    <lightning-icon icon-name="utility:share" size="xx-small"></lightning-icon>
+                                                    <span>Join Session</span>
+                                                    <div class="btn-shimmer"></div>
+                                                </a>
+                                            </template>
+                                        </div>
+                                    </div>
                                 </template>
-                                <template if:true={isClockedIn}>
-                                    <button class="quick-action-item qa-red" onclick={handleClockOut}>
-                                        <div class="qa-icon">
-                                            <lightning-icon icon-name="utility:ban" size="small"></lightning-icon>
+
+                                <!-- Empty State -->
+                                <template if:false={sessionLinks.length}>
+                                    <div class="session-empty-state">
+                                        <div class="empty-icon">
+                                            <lightning-icon icon-name="utility:video" size="large"></lightning-icon>
                                         </div>
-                                        <span class="qa-label">Clock Out</span>
-                                    </button>
+                                        <h4>No Upcoming Sessions</h4>
+                                        <p>Class session links will appear here when scheduled</p>
+                                    </div>
                                 </template>
                             </div>
                         </div>
@@ -331,10 +354,10 @@
                                 <tbody>
                                     <template for:each={visibleHistory} for:item="record">
                                         <tr key={record.Id}>
-                                            <td>{record.Login_Date__c}</td>
+                                            <td>{record.Date__c}</td>
                                             <td>{record.Login_Time__c}</td>
                                             <td>{record.Logout_Time__c}</td>
-                                            <td>{record.Duration__c}</td>
+                                            <td>{record.Working_Hours__c}</td>
                                             <td>
                                                 <span class="status-dot" data-status={record.Status__c}></span>
                                                 {record.Status__c}
@@ -490,56 +513,140 @@
                                     </button>
                                 </div>
 
+                                <!-- Visual Progress Indicator -->
+                                <div class="task-progress-tracker">
+                                    <div class="progress-step-line">
+                                        <div class={progressLineClass}></div>
+                                    </div>
+                                    <div class={progressStepAssignedClass} data-status="Assigned"
+                                        onclick={handleStatusCardClick}>
+                                        <div class="progress-step-icon">
+                                            <lightning-icon icon-name="utility:inbox" size="xx-small"></lightning-icon>
+                                        </div>
+                                        <span class="progress-step-label">Assigned</span>
+                                    </div>
+                                    <div class={progressStepInProgressClass} data-status="In Progress"
+                                        onclick={handleStatusCardClick}>
+                                        <div class="progress-step-icon">
+                                            <lightning-icon icon-name="utility:clock" size="xx-small"></lightning-icon>
+                                        </div>
+                                        <span class="progress-step-label">In Progress</span>
+                                    </div>
+                                    <div class={progressStepCompletedClass} data-status="Completed"
+                                        onclick={handleStatusCardClick}>
+                                        <div class="progress-step-icon">
+                                            <lightning-icon icon-name="utility:success"
+                                                size="xx-small"></lightning-icon>
+                                        </div>
+                                        <span class="progress-step-label">Completed</span>
+                                    </div>
+                                </div>
+
                                 <!-- Enhanced Form Body -->
                                 <div class="modal-body-redesigned">
-                                    <!-- Status Field with Icon -->
-                                    <div class="form-field-wrapper">
-                                        <div class="field-icon-label">
+                                    <!-- Status Selector with Interactive Cards -->
+                                    <div class="status-selector-section">
+                                        <div class="section-header">
                                             <lightning-icon icon-name="utility:record_update"
                                                 size="x-small"></lightning-icon>
-                                            <span class="field-label-text">Task Status</span>
+                                            <span class="section-title">Update Status</span>
                                         </div>
-                                        <lightning-combobox name="Status__c" label="" value={selectedTask.Status__c}
-                                            options={taskStatusOptions} onchange={handleTaskInput}
-                                            variant="label-hidden" class="custom-combobox"></lightning-combobox>
+                                        <div class="status-cards-grid">
+                                            <div class={statusCardAssignedClass} data-status="Assigned"
+                                                onclick={handleStatusCardClick}>
+                                                <div class="status-card-icon status-icon-assigned">
+                                                    <lightning-icon icon-name="utility:inbox"
+                                                        size="small"></lightning-icon>
+                                                </div>
+                                                <div class="status-card-content">
+                                                    <div class="status-card-title">Assigned</div>
+                                                    <div class="status-card-desc">Task received</div>
+                                                </div>
+                                                <div class="status-card-check">
+                                                    <lightning-icon icon-name="utility:check"
+                                                        size="xx-small"></lightning-icon>
+                                                </div>
+                                            </div>
+                                            <div class={statusCardInProgressClass} data-status="In Progress"
+                                                onclick={handleStatusCardClick}>
+                                                <div class="status-card-icon status-icon-inprogress">
+                                                    <lightning-icon icon-name="utility:clock"
+                                                        size="small"></lightning-icon>
+                                                </div>
+                                                <div class="status-card-content">
+                                                    <div class="status-card-title">In Progress</div>
+                                                    <div class="status-card-desc">Working on it</div>
+                                                </div>
+                                                <div class="status-card-check">
+                                                    <lightning-icon icon-name="utility:check"
+                                                        size="xx-small"></lightning-icon>
+                                                </div>
+                                            </div>
+                                            <div class={statusCardCompletedClass} data-status="Completed"
+                                                onclick={handleStatusCardClick}>
+                                                <div class="status-card-icon status-icon-completed">
+                                                    <lightning-icon icon-name="utility:success"
+                                                        size="small"></lightning-icon>
+                                                </div>
+                                                <div class="status-card-content">
+                                                    <div class="status-card-title">Completed</div>
+                                                    <div class="status-card-desc">Task done</div>
+                                                </div>
+                                                <div class="status-card-check">
+                                                    <lightning-icon icon-name="utility:check"
+                                                        size="xx-small"></lightning-icon>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    <!-- Today's Progress Field with Icon -->
-                                    <div class="form-field-wrapper">
-                                        <div class="field-icon-label">
-                                            <lightning-icon icon-name="utility:description"
-                                                size="x-small"></lightning-icon>
-                                            <span class="field-label-text">Today's Progress</span>
+                                    <!-- Task Details Card -->
+                                    <div class="task-details-card">
+                                        <div class="section-header">
+                                            <lightning-icon icon-name="utility:text" size="x-small"></lightning-icon>
+                                            <span class="section-title">Task Details</span>
                                         </div>
-                                        <lightning-textarea name="Today_Work_Progress__c" label=""
-                                            value={selectedTask.Today_Work_Progress__c} onchange={handleTaskInput}
-                                            variant="label-hidden" placeholder="Describe your accomplishments today..."
-                                            class="custom-textarea"></lightning-textarea>
-                                    </div>
 
-                                    <!-- Submission Link Field with Icon -->
-                                    <div class="form-field-wrapper">
-                                        <div class="field-icon-label">
-                                            <lightning-icon icon-name="utility:link" size="x-small"></lightning-icon>
-                                            <span class="field-label-text">Submission Link</span>
+                                        <!-- Today's Progress Field -->
+                                        <div class="form-field-wrapper">
+                                            <div class="field-icon-label">
+                                                <lightning-icon icon-name="utility:description"
+                                                    size="x-small"></lightning-icon>
+                                                <span class="field-label-text">Today's Progress</span>
+                                            </div>
+                                            <lightning-textarea name="Today_Work_Progress__c" label=""
+                                                value={selectedTask.Today_Work_Progress__c} onchange={handleTaskInput}
+                                                variant="label-hidden"
+                                                placeholder="Describe your accomplishments today..."
+                                                class="custom-textarea"></lightning-textarea>
                                         </div>
-                                        <lightning-input name="Submission_Link__c" label="" type="url"
-                                            value={selectedTask.Submission_Link__c} onchange={handleTaskInput}
-                                            variant="label-hidden" placeholder="https://example.com/submission"
-                                            class="custom-input"></lightning-input>
-                                    </div>
 
-                                    <!-- Remarks Field with Icon -->
-                                    <div class="form-field-wrapper">
-                                        <div class="field-icon-label">
-                                            <lightning-icon icon-name="utility:comments"
-                                                size="x-small"></lightning-icon>
-                                            <span class="field-label-text">Additional Remarks</span>
+                                        <!-- Submission Link Field -->
+                                        <div class="form-field-wrapper">
+                                            <div class="field-icon-label">
+                                                <lightning-icon icon-name="utility:link"
+                                                    size="x-small"></lightning-icon>
+                                                <span class="field-label-text">Submission Link</span>
+                                            </div>
+                                            <lightning-input name="Submission_Link__c" label="" type="url"
+                                                value={selectedTask.Submission_Link__c} onchange={handleTaskInput}
+                                                variant="label-hidden" placeholder="https://example.com/submission"
+                                                class="custom-input"></lightning-input>
                                         </div>
-                                        <lightning-textarea name="Remarks__c" label="" value={selectedTask.Remarks__c}
-                                            onchange={handleTaskInput} variant="label-hidden"
-                                            placeholder="Any blockers, notes, or additional comments..."
-                                            class="custom-textarea"></lightning-textarea>
+
+                                        <!-- Remarks Field -->
+                                        <div class="form-field-wrapper">
+                                            <div class="field-icon-label">
+                                                <lightning-icon icon-name="utility:comments"
+                                                    size="x-small"></lightning-icon>
+                                                <span class="field-label-text">Additional Remarks</span>
+                                            </div>
+                                            <lightning-textarea name="Remarks__c" label=""
+                                                value={selectedTask.Remarks__c} onchange={handleTaskInput}
+                                                variant="label-hidden"
+                                                placeholder="Any blockers, notes, or additional comments..."
+                                                class="custom-textarea"></lightning-textarea>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -621,111 +728,277 @@
             <!-- ====================== WORK LOGS/DIARY TAB ====================== -->
             <template if:true={isWorkLogs}>
                 <div class="worklogs-content animate-fade-in">
-                    <div class="section-header-main">
-                        <h2>My Diary</h2>
-                        <p>Daily work logs and reflections</p>
-                    </div>
-
-                    <!-- Daily Log Submission Form -->
-                    <div class="diary-form-card">
-                        <h3 class="form-section-title">Submit Today's Entry</h3>
-                        <div class="form-grid">
-                            <lightning-input type="date" label="Date" value={logForm.date} data-field="date"
-                                onchange={handleLogInput}></lightning-input>
-
-                            <lightning-combobox label="Course" value={logForm.course} options={courseOptions}
-                                onchange={handleCourseChange} placeholder="Select a course"></lightning-combobox>
-
-                            <lightning-combobox label="Module" value={logForm.module} options={moduleOptions}
-                                onchange={handleModuleChange} placeholder="Select a module"
-                                disabled={isModuleDisabled}></lightning-combobox>
-
-                            <lightning-combobox label="Topic" value={logForm.topic} options={topicOptions}
-                                onchange={handleTopicChange} placeholder="Select a topic"
-                                disabled={isTopicDisabled}></lightning-combobox>
-
-                            <lightning-input type="number" label="Hours Worked" value={logForm.hours} data-field="hours"
-                                onchange={handleLogInput} min="0" step="0.5"></lightning-input>
-
-                            <lightning-input type="url" label="Submission Link" value={logForm.submissionLink}
-                                data-field="submissionLink" onchange={handleLogInput}></lightning-input>
-
-                            <div class="form-full-width">
-                                <lightning-textarea label="Description" value={logForm.description}
-                                    data-field="description" onchange={handleLogInput}
-                                    placeholder="Describe what you worked on today..."></lightning-textarea>
+                    <!-- Page Header -->
+                    <div class="diary-page-header">
+                        <div class="diary-header-content">
+                            <div class="diary-header-icon">
+                                <lightning-icon icon-name="standard:work_order" size="medium"></lightning-icon>
                             </div>
-
-                            <div class="form-full-width">
-                                <lightning-textarea label="Key Learnings" value={logForm.learnings}
-                                    data-field="learnings" onchange={handleLogInput}
-                                    placeholder="What did you learn today?"></lightning-textarea>
+                            <div class="diary-header-text">
+                                <h2 class="diary-main-title">My Daily Diary</h2>
+                                <p class="diary-subtitle">Track your daily progress and reflections</p>
                             </div>
-
-                            <div class="form-full-width">
-                                <lightning-textarea label="Blockers" value={logForm.blockers} data-field="blockers"
-                                    onchange={handleLogInput}
-                                    placeholder="Any challenges or blockers?"></lightning-textarea>
-                            </div>
-                        </div>
-                        <div class="form-actions">
-                            <button class="btn-primary" onclick={handleSubmitLog}>
-                                <lightning-icon icon-name="utility:success" size="xx-small"></lightning-icon>
-                                Submit Entry
-                            </button>
                         </div>
                     </div>
 
-                    <!-- Daily Logs History -->
-                    <div class="logs-history-section">
-                        <h3 class="form-section-title">Previous Entries</h3>
-                        <div class="table-container">
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Course</th>
-                                        <th>Module</th>
-                                        <th>Topic</th>
-                                        <th>Hours</th>
-                                        <th>Description</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
+                    <!-- 50-50 Split Layout -->
+                    <div class="diary-split-container">
+                        <!-- LEFT SIDE: Submit Today's Entry -->
+                        <div class="diary-left-panel">
+                            <div class="diary-panel-header">
+                                <div class="panel-header-icon panel-icon-purple">
+                                    <lightning-icon icon-name="utility:edit" size="small"></lightning-icon>
+                                </div>
+                                <div class="panel-header-text">
+                                    <h3 class="panel-title">Submit Today's Entry</h3>
+                                    <p class="panel-desc">Log your daily work and learnings</p>
+                                </div>
+                            </div>
+
+                            <div class="diary-form-wrapper">
+                                <!-- Date & Course Row -->
+                                <div class="diary-form-row">
+                                    <div class="diary-form-field">
+                                        <div class="field-label-enhanced">
+                                            <lightning-icon icon-name="utility:event" size="xx-small"></lightning-icon>
+                                            <span>Date</span>
+                                        </div>
+                                        <lightning-input type="date" name="date" label="" variant="label-hidden"
+                                            value={logForm.date} data-field="date" onchange={handleLogInput}
+                                            min={minEntryDate} max={maxEntryDate}
+                                            class="enhanced-input"></lightning-input>
+                                    </div>
+                                    <div class="diary-form-field">
+                                        <div class="field-label-enhanced">
+                                            <lightning-icon icon-name="utility:education"
+                                                size="xx-small"></lightning-icon>
+                                            <span>Course</span>
+                                        </div>
+                                        <lightning-combobox label="" variant="label-hidden" value={logForm.course}
+                                            options={courseOptions} onchange={handleCourseChange}
+                                            placeholder="Select course" class="enhanced-combobox"></lightning-combobox>
+                                    </div>
+                                </div>
+
+                                <!-- Module & Topic Row -->
+                                <div class="diary-form-row">
+                                    <div class="diary-form-field-full">
+                                        <div class="field-label-enhanced">
+                                            <lightning-icon icon-name="utility:layers" size="xx-small"></lightning-icon>
+                                            <span>Module</span>
+                                        </div>
+                                        <lightning-dual-listbox label="Select Modules" source-label="Available"
+                                            selected-label="Selected" options={moduleOptions} value={logForm.module}
+                                            onchange={handleModuleChange} disabled={isModuleDisabled}
+                                            class="enhanced-dual-listbox"></lightning-dual-listbox>
+                                    </div>
+                                </div>
+
+                                <!-- Topics Row -->
+                                <div class="diary-form-row">
+                                    <div class="diary-form-field-full">
+                                        <div class="field-label-enhanced">
+                                            <lightning-icon icon-name="utility:topic" size="xx-small"></lightning-icon>
+                                            <span>Topics</span>
+                                        </div>
+                                        <lightning-textarea label="" variant="label-hidden" value={logForm.topic}
+                                            data-field="topic" onchange={handleLogInput}
+                                            placeholder="Enter topics covered..."
+                                            class="enhanced-textarea"></lightning-textarea>
+                                    </div>
+                                </div>
+
+                                <!-- Hours & Submission Link Row -->
+                                <div class="diary-form-row">
+                                    <div class="diary-form-field">
+                                        <div class="field-label-enhanced">
+                                            <lightning-icon icon-name="utility:clock" size="xx-small"></lightning-icon>
+                                            <span>Hours Worked</span>
+                                        </div>
+                                        <lightning-input type="number" label="" variant="label-hidden"
+                                            value={logForm.hours} data-field="hours" onchange={handleLogInput} min="0"
+                                            step="0.5" placeholder="0.0" class="enhanced-input"></lightning-input>
+                                    </div>
+                                    <div class="diary-form-field">
+                                        <div class="field-label-enhanced">
+                                            <lightning-icon icon-name="utility:link" size="xx-small"></lightning-icon>
+                                            <span>Submission Link</span>
+                                        </div>
+                                        <lightning-input type="url" label="" variant="label-hidden"
+                                            value={logForm.submissionLink} data-field="submissionLink"
+                                            onchange={handleLogInput} placeholder="https://..."
+                                            class="enhanced-input"></lightning-input>
+                                    </div>
+                                </div>
+
+                                <!-- Description Field -->
+                                <div class="diary-form-field-full">
+                                    <div class="field-label-enhanced">
+                                        <lightning-icon icon-name="utility:text" size="xx-small"></lightning-icon>
+                                        <span>Description</span>
+                                    </div>
+                                    <lightning-textarea label="" variant="label-hidden" value={logForm.description}
+                                        data-field="description" onchange={handleLogInput}
+                                        placeholder="Describe what you worked on today..."
+                                        class="enhanced-textarea"></lightning-textarea>
+                                </div>
+
+                                <!-- Key Learnings Field -->
+                                <div class="diary-form-field-full">
+                                    <div class="field-label-enhanced">
+                                        <lightning-icon icon-name="utility:knowledge_base"
+                                            size="xx-small"></lightning-icon>
+                                        <span>Key Learnings</span>
+                                    </div>
+                                    <lightning-textarea label="" variant="label-hidden" value={logForm.learnings}
+                                        data-field="learnings" onchange={handleLogInput}
+                                        placeholder="What did you learn today?"
+                                        class="enhanced-textarea"></lightning-textarea>
+                                </div>
+
+                                <!-- Blockers Field -->
+                                <div class="diary-form-field-full">
+                                    <div class="field-label-enhanced">
+                                        <lightning-icon icon-name="utility:warning" size="xx-small"></lightning-icon>
+                                        <span>Blockers & Challenges</span>
+                                    </div>
+                                    <lightning-textarea label="" variant="label-hidden" value={logForm.blockers}
+                                        data-field="blockers" onchange={handleLogInput}
+                                        placeholder="Any challenges or blockers?"
+                                        class="enhanced-textarea"></lightning-textarea>
+                                </div>
+
+                                <!-- Submit Button -->
+                                <div class="diary-form-actions">
+                                    <button class="diary-submit-btn" onclick={handleSubmitLog}>
+                                        <lightning-icon icon-name="utility:check" size="small"></lightning-icon>
+                                        <span>Submit Today's Entry</span>
+                                        <div class="btn-shine"></div>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- RIGHT SIDE: Previous Entries -->
+                        <div class="diary-right-panel">
+                            <div class="diary-panel-header">
+                                <div class="panel-header-icon panel-icon-green">
+                                    <lightning-icon icon-name="utility:history" size="small"></lightning-icon>
+                                </div>
+                                <div class="panel-header-text">
+                                    <h3 class="panel-title">Previous Entries</h3>
+                                    <p class="panel-desc">Your work history and progress</p>
+                                </div>
+                            </div>
+
+                            <div class="diary-entries-wrapper">
+                                <!-- Entry Cards -->
+                                <div class="diary-entries-list">
                                     <template for:each={visibleWorkLogs} for:item="log">
-                                        <tr key={log.Id}>
-                                            <td>{log.Log_Date__c}</td>
-                                            <td>{log.Course__c}</td>
-                                            <td>{log.Module__c}</td>
-                                            <td>{log.Topic__c}</td>
-                                            <td>{log.Hours__c}</td>
-                                            <td class="description-cell">{log.Description__c}</td>
-                                        </tr>
-                                    </template>
-                                    <template if:false={visibleWorkLogs.length}>
-                                        <tr>
-                                            <td colspan="6" class="no-data">No diary entries found</td>
-                                        </tr>
-                                    </template>
-                                </tbody>
-                            </table>
-                        </div>
+                                        <div key={log.Id} class="diary-entry-card">
+                                            <div class="entry-card-header">
+                                                <div class="entry-date-badge">
+                                                    <lightning-icon icon-name="utility:event"
+                                                        size="xx-small"></lightning-icon>
+                                                    <span>{log.Log_Date__c}</span>
+                                                </div>
+                                                <div class="entry-hours-badge">
+                                                    <lightning-icon icon-name="utility:clock"
+                                                        size="xx-small"></lightning-icon>
+                                                    <span>{log.Hours_Spent__c}h</span>
+                                                </div>
+                                            </div>
 
-                        <!-- Pagination Controls -->
-                        <template if:true={dailyLogs.length}>
-                            <div class="pagination-controls">
-                                <button class="pagination-btn" onclick={prevWorkLogsPage}
-                                    disabled={isWorkLogsFirstPage}>
-                                    <lightning-icon icon-name="utility:chevronleft" size="xx-small"></lightning-icon>
-                                    Previous
-                                </button>
-                                <span class="pagination-info">Page {workLogsPage} of {totalWorkLogsPages}</span>
-                                <button class="pagination-btn" onclick={nextWorkLogsPage} disabled={isWorkLogsLastPage}>
-                                    Next
-                                    <lightning-icon icon-name="utility:chevronright" size="xx-small"></lightning-icon>
-                                </button>
+                                            <div class="entry-card-body">
+                                                <div class="entry-info-row">
+                                                    <div class="entry-info-item">
+                                                        <span class="entry-info-label">Course</span>
+                                                        <span class="entry-info-value">{log.Course__c}</span>
+                                                    </div>
+                                                    <div class="entry-info-item">
+                                                        <span class="entry-info-label">Module</span>
+                                                        <span class="entry-info-value">{log.Module__c}</span>
+                                                    </div>
+                                                </div>
+
+                                                <div class="entry-topic-pill" if:true={log.Topic__c}>
+                                                    <lightning-icon icon-name="utility:topic"
+                                                        size="xx-small"></lightning-icon>
+                                                    <span>{log.Topic__c}</span>
+                                                </div>
+
+                                                <template if:true={log.Description__c}>
+                                                    <div class="entry-description">
+                                                        <div class="entry-desc-label">
+                                                            <lightning-icon icon-name="utility:text"
+                                                                size="xx-small"></lightning-icon>
+                                                            <span>Description</span>
+                                                        </div>
+                                                        <p>{log.Description__c}</p>
+                                                    </div>
+                                                </template>
+
+                                                <template if:true={log.Learnings__c}>
+                                                    <div class="entry-learnings">
+                                                        <div class="entry-learning-label">
+                                                            <lightning-icon icon-name="utility:knowledge_base"
+                                                                size="xx-small"></lightning-icon>
+                                                            <span>Key Learnings</span>
+                                                        </div>
+                                                        <p>{log.Learnings__c}</p>
+                                                    </div>
+                                                </template>
+
+                                                <template if:true={log.Blockers__c}>
+                                                    <div class="entry-blockers">
+                                                        <div class="entry-blocker-label">
+                                                            <lightning-icon icon-name="utility:warning"
+                                                                size="xx-small"></lightning-icon>
+                                                            <span>Blockers</span>
+                                                        </div>
+                                                        <p>{log.Blockers__c}</p>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <!-- No Entries State -->
+                                    <template if:false={visibleWorkLogs.length}>
+                                        <div class="diary-no-entries">
+                                            <div class="no-entries-icon">
+                                                <lightning-icon icon-name="utility:page" size="large"></lightning-icon>
+                                            </div>
+                                            <h4>No Diary Entries Yet</h4>
+                                            <p>Start by submitting your first entry on the left</p>
+                                        </div>
+                                    </template>
+                                </div>
+
+                                <!-- Pagination -->
+                                <template if:true={dailyLogs.length}>
+                                    <div class="diary-pagination">
+                                        <button class="diary-pagination-btn" onclick={prevWorkLogsPage}
+                                            disabled={isWorkLogsFirstPage}>
+                                            <lightning-icon icon-name="utility:chevronleft"
+                                                size="xx-small"></lightning-icon>
+                                            <span>Previous</span>
+                                        </button>
+                                        <div class="diary-pagination-info">
+                                            <span class="page-number">{workLogsPage}</span>
+                                            <span class="page-separator">of</span>
+                                            <span class="page-total">{totalWorkLogsPages}</span>
+                                        </div>
+                                        <button class="diary-pagination-btn" onclick={nextWorkLogsPage}
+                                            disabled={isWorkLogsLastPage}>
+                                            <span>Next</span>
+                                            <lightning-icon icon-name="utility:chevronright"
+                                                size="xx-small"></lightning-icon>
+                                        </button>
+                                    </div>
+                                </template>
                             </div>
-                        </template>
+                        </div>
                     </div>
                 </div>
             </template>
@@ -835,82 +1108,168 @@
             <!-- ====================== MENTORSHIP TAB ====================== -->
             <template if:true={isMentorship}>
                 <div class="mentorship-content animate-fade-in">
-                    <div class="section-header-main">
-                        <h2>Mentorship</h2>
-                        <p>Connect with mentors and get guidance</p>
-                    </div>
-
-                    <!-- Mentorship Request Form -->
-                    <div class="mentorship-form-card">
-                        <h3 class="form-section-title">Request Mentorship</h3>
-                        <div class="form-grid">
-                            <lightning-combobox label="Request Type" value={mentorshipForm.type} options={requestTypes}
-                                data-field="type" onchange={handleMentorshipInput}></lightning-combobox>
-
-                            <div class="form-full-width">
-                                <lightning-textarea label="Description" value={mentorshipForm.description}
-                                    data-field="description" onchange={handleMentorshipInput}
-                                    placeholder="Explain what you need help with..." required></lightning-textarea>
+                    <!-- Gradient Page Header -->
+                    <div class="mentorship-page-header">
+                        <div class="page-header-content">
+                            <div class="page-header-icon-wrapper">
+                                <lightning-icon icon-name="standard:coaching" size="medium"></lightning-icon>
+                            </div>
+                            <div class="page-header-text">
+                                <h2 class="page-header-title">Mentorship Hub</h2>
+                                <p class="page-header-subtitle">Connect with mentors and accelerate your growth</p>
                             </div>
                         </div>
-                        <div class="form-actions">
-                            <button class="btn-primary" onclick={handleSubmitMentorship}>
-                                <lightning-icon icon-name="utility:send" size="xx-small"></lightning-icon>
-                                Submit Request
-                            </button>
-                        </div>
+                        <div class="floating-circle circle-1"></div>
+                        <div class="floating-circle circle-2"></div>
                     </div>
 
-                    <!-- Submitted Requests List -->
-                    <div class="mentorship-requests-section">
-                        <h3 class="form-section-title">My Requests</h3>
-                        <div class="mentorship-requests-grid">
-                            <template for:each={visibleMentorshipRequests} for:item="request">
-                                <div key={request.Id} class="mentorship-request-card">
-                                    <div class="request-header">
-                                        <span class="request-type-badge">{request.Request_Type__c}</span>
-                                        <span class="request-status-badge"
-                                            data-status={request.Status__c}>{request.Status__c}</span>
+                    <!-- 50-50 Split Container -->
+                    <div class="mentorship-split-container">
+                        <!-- LEFT SIDE: Request Mentor -->
+                        <div class="mentorship-left-panel">
+                            <div class="mentorship-panel-header">
+                                <div class="panel-header-icon panel-icon-blue">
+                                    <lightning-icon icon-name="utility:add" size="small"></lightning-icon>
+                                </div>
+                                <div class="panel-header-text">
+                                    <h3 class="panel-title">Request Mentor</h3>
+                                    <p class="panel-desc">Submit a new mentorship request</p>
+                                </div>
+                            </div>
+
+                            <div class="mentorship-form-wrapper">
+                                <!-- Request Type Field -->
+                                <div class="mentorship-form-field">
+                                    <div class="field-label-enhanced">
+                                        <lightning-icon icon-name="utility:list" size="xx-small"></lightning-icon>
+                                        <span>Request Type</span>
                                     </div>
-                                    <div class="request-body">
-                                        <p class="request-description">{request.Description__c}</p>
-                                        <div class="request-meta">
-                                            <span class="request-date">Requested: {request.CreatedDate}</span>
+                                    <lightning-combobox label="" variant="label-hidden" value={mentorshipForm.type}
+                                        options={requestTypes} data-field="type" onchange={handleMentorshipInput}
+                                        class="enhanced-combobox">
+                                    </lightning-combobox>
+                                </div>
+
+                                <!-- Description Field -->
+                                <div class="mentorship-form-field-full">
+                                    <div class="field-label-enhanced">
+                                        <lightning-icon icon-name="utility:text" size="xx-small"></lightning-icon>
+                                        <span>Description</span>
+                                    </div>
+                                    <lightning-textarea label="" variant="label-hidden"
+                                        value={mentorshipForm.description} data-field="description"
+                                        onchange={handleMentorshipInput}
+                                        placeholder="Explain what you need help with..." class="enhanced-textarea"
+                                        required>
+                                    </lightning-textarea>
+                                </div>
+
+                                <!-- Submit Button -->
+                                <div class="mentorship-form-actions">
+                                    <button class="mentorship-submit-btn" onclick={handleSubmitMentorship}>
+                                        <lightning-icon icon-name="utility:send" size="small"></lightning-icon>
+                                        <span>Submit Request</span>
+                                        <div class="btn-shine"></div>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- RIGHT SIDE: My Requests -->
+                        <div class="mentorship-right-panel">
+                            <div class="mentorship-panel-header">
+                                <div class="panel-header-icon panel-icon-purple">
+                                    <lightning-icon icon-name="utility:segments" size="small"></lightning-icon>
+                                </div>
+                                <div class="panel-header-text">
+                                    <h3 class="panel-title">My Requests</h3>
+                                    <p class="panel-desc">Track your mentorship requests</p>
+                                </div>
+                            </div>
+
+                            <div class="mentorship-requests-wrapper">
+                                <!-- Request Cards -->
+                                <div class="mentorship-requests-list">
+                                    <template for:each={visibleMentorshipRequests} for:item="request">
+                                        <div key={request.Id} class="mentorship-request-card-new">
+                                            <div class="request-card-header">
+                                                <div class="request-type-pill">
+                                                    <lightning-icon icon-name="utility:strategy"
+                                                        size="xx-small"></lightning-icon>
+                                                    <span>{request.Request_Type__c}</span>
+                                                </div>
+                                                <div class="request-status-pill" data-status={request.Status__c}>
+                                                    <span>{request.Status__c}</span>
+                                                </div>
+                                            </div>
+
+                                            <div class="request-card-body">
+                                                <div class="request-description-section">
+                                                    <div class="request-desc-label">
+                                                        <lightning-icon icon-name="utility:text"
+                                                            size="xx-small"></lightning-icon>
+                                                        <span>Description</span>
+                                                    </div>
+                                                    <p>{request.Description__c}</p>
+                                                </div>
+
+                                                <div class="request-date-info">
+                                                    <lightning-icon icon-name="utility:event"
+                                                        size="xx-small"></lightning-icon>
+                                                    <span>Requested on {request.CreatedDate}</span>
+                                                </div>
+
+                                                <template if:true={request.Response__c}>
+                                                    <div class="request-response-section">
+                                                        <div class="response-label">
+                                                            <lightning-icon icon-name="utility:chat"
+                                                                size="xx-small"></lightning-icon>
+                                                            <span>Mentor Response</span>
+                                                        </div>
+                                                        <p>{request.Response__c}</p>
+                                                    </div>
+                                                </template>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <template if:true={request.Response__c}>
-                                        <div class="request-response">
-                                            <strong>Mentor Response:</strong>
-                                            <p>{request.Response__c}</p>
+                                    </template>
+
+                                    <!-- No Requests State -->
+                                    <template if:false={mentorshipRequests.length}>
+                                        <div class="mentorship-no-requests">
+                                            <div class="no-requests-icon">
+                                                <lightning-icon icon-name="standard:coaching"
+                                                    size="large"></lightning-icon>
+                                            </div>
+                                            <h4>No Requests Yet</h4>
+                                            <p>Start by submitting your first mentorship request on the left</p>
                                         </div>
                                     </template>
                                 </div>
-                            </template>
-                            <template if:false={mentorshipRequests.length}>
-                                <div class="empty-state-large">
-                                    <lightning-icon icon-name="standard:coaching" size="large"></lightning-icon>
-                                    <h3>No mentorship requests yet</h3>
-                                    <p>Submit a request to get guidance from mentors</p>
-                                </div>
-                            </template>
-                        </div>
 
-                        <!-- Pagination Controls -->
-                        <template if:true={mentorshipRequests.length}>
-                            <div class="pagination-controls">
-                                <button class="pagination-btn" onclick={prevMentorshipPage}
-                                    disabled={isMentorshipFirstPage}>
-                                    <lightning-icon icon-name="utility:chevronleft" size="xx-small"></lightning-icon>
-                                    Previous
-                                </button>
-                                <span class="pagination-info">Page {mentorshipPage} of {totalMentorshipPages}</span>
-                                <button class="pagination-btn" onclick={nextMentorshipPage}
-                                    disabled={isMentorshipLastPage}>
-                                    Next
-                                    <lightning-icon icon-name="utility:chevronright" size="xx-small"></lightning-icon>
-                                </button>
+                                <!-- Pagination -->
+                                <template if:true={mentorshipRequests.length}>
+                                    <div class="mentorship-pagination">
+                                        <button class="mentorship-pagination-btn" onclick={prevMentorshipPage}
+                                            disabled={isMentorshipFirstPage}>
+                                            <lightning-icon icon-name="utility:chevronleft"
+                                                size="xx-small"></lightning-icon>
+                                            <span>Previous</span>
+                                        </button>
+                                        <div class="mentorship-pagination-info">
+                                            <span class="page-number">{mentorshipPage}</span>
+                                            <span class="page-separator">of</span>
+                                            <span class="page-total">{totalMentorshipPages}</span>
+                                        </div>
+                                        <button class="mentorship-pagination-btn" onclick={nextMentorshipPage}
+                                            disabled={isMentorshipLastPage}>
+                                            <span>Next</span>
+                                            <lightning-icon icon-name="utility:chevronright"
+                                                size="xx-small"></lightning-icon>
+                                        </button>
+                                    </div>
+                                </template>
                             </div>
-                        </template>
+                        </div>
                     </div>
                 </div>
             </template>

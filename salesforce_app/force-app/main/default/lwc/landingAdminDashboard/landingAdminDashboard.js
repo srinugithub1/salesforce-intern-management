@@ -26,6 +26,10 @@ import getAllSyllabus from '@salesforce/apex/AdminController.getAllSyllabus';
 import saveSyllabus from '@salesforce/apex/AdminController.saveSyllabus';
 import deleteSyllabus from '@salesforce/apex/AdminController.deleteSyllabus';
 
+import getAllSessionLinks from '@salesforce/apex/AdminController.getAllSessionLinks';
+import saveSessionLink from '@salesforce/apex/AdminController.saveSessionLink';
+import deleteSessionLink from '@salesforce/apex/AdminController.deleteSessionLink';
+
 import getAdminMetrics from '@salesforce/apex/AdminController.getAdminMetrics';
 import getFilteredTasks from '@salesforce/apex/AdminController.getFilteredTasks';
 import getTaskStats from '@salesforce/apex/AdminController.getTaskStats';
@@ -297,6 +301,9 @@ export default class LandingAdminDashboard extends LightningElement {
     get navClassResources() { return this.currentTab === 'resources' ? 'active' : ''; }
     get navClassTasks() { return this.currentTab === 'tasks' ? 'active' : ''; }
     get navClassSyllabus() { return this.currentTab === 'syllabus' ? 'active' : ''; }
+    get navClassSessionLinks() { return this.currentTab === 'sessionlinks' ? 'active' : ''; }
+
+    get isSessionLinksTab() { return this.currentTab === 'sessionlinks'; }
 
     get userRoleLabel() {
         return this.role === 'Super Admin' ? 'Super Admin' : 'Team Lead';
@@ -749,6 +756,37 @@ export default class LandingAdminDashboard extends LightningElement {
         return new Date(dateStr).toLocaleDateString(undefined, options);
     }
 
+    // --- Helper for Times ---
+    formatTime(timeValue) {
+        if (!timeValue && timeValue !== 0) return '';
+
+        let hours, minutes;
+
+        // Check if timeValue is a number (milliseconds since midnight)
+        if (typeof timeValue === 'number') {
+            // Convert milliseconds to hours and minutes
+            const totalMinutes = Math.floor(timeValue / 60000);
+            hours = Math.floor(totalMinutes / 60);
+            minutes = totalMinutes % 60;
+        } else {
+            // timeValue is a string in format "HH:MM:SS.sss" or "HH:MM:SS"
+            const parts = timeValue.split(':');
+            if (parts.length < 2) return timeValue;
+            hours = parseInt(parts[0]);
+            minutes = parts[1];
+        }
+
+        // Convert to 12-hour format with AM/PM
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12; // 0 should be 12
+
+        // Ensure minutes is two digits
+        const minutesStr = typeof minutes === 'number' ? minutes.toString().padStart(2, '0') : minutes;
+
+        return `${hours}:${minutesStr} ${ampm}`;
+    }
+
     // --- Dashboard Enhancements ---
     async loadDashboardData() {
         try {
@@ -947,6 +985,8 @@ export default class LandingAdminDashboard extends LightningElement {
                 InternName: row.Intern__r ? row.Intern__r.Name : '',
                 formattedDate: this.formatDate(row.Log_Date__c)
             }));
+        } else if (result.error) {
+            console.error('Error fetching Daily Logs:', result.error);
         }
     }
 
@@ -1001,7 +1041,6 @@ export default class LandingAdminDashboard extends LightningElement {
 
     // --- Getters for Paginated Data & Counts ---
     get visibleInterns() { return this.paginateData(this.filteredInterns, this.currentPageInterns); }
-    // get totalInternsCount() { return this.interns ? this.interns.length : 0; } // REMOVED: Now handled by filteredInterns getter above
     get totalInternsPages() { return Math.ceil(this.totalInternsCount / this.pageSize); }
     get isInternsFirstPage() { return this.currentPageInterns === 1; }
     get isInternsLastPage() { return this.currentPageInterns >= this.totalInternsPages; }
@@ -1032,7 +1071,7 @@ export default class LandingAdminDashboard extends LightningElement {
     @track logFilterInternName = '';
     @track selectedCourse = '';
     @track selectedModule = '';
-    @track selectedTopic = '';
+
 
     // --- Logs Filter Getters ---
     get courseOptions() {
@@ -1049,13 +1088,7 @@ export default class LandingAdminDashboard extends LightningElement {
         return [{ label: 'All Modules', value: '' }, ...modules.map(m => ({ label: m, value: m }))];
     }
 
-    get topicOptions() {
-        if (!this.selectedModule || !this.syllabus) return [{ label: 'All Topics', value: '' }];
-        const topics = [...new Set(this.syllabus
-            .filter(item => item.Course_Name__c === this.selectedCourse && item.Module_Name__c === this.selectedModule)
-            .map(item => item.Topic_Name__c))];
-        return [{ label: 'All Topics', value: '' }, ...topics.map(t => ({ label: t, value: t }))];
-    }
+
 
     handleLogFilterChange(event) {
         const field = event.target.dataset.field;
@@ -1065,13 +1098,10 @@ export default class LandingAdminDashboard extends LightningElement {
         else if (field === 'course') {
             this.selectedCourse = value;
             this.selectedModule = '';
-            this.selectedTopic = '';
         }
         else if (field === 'module') {
             this.selectedModule = value;
-            this.selectedTopic = '';
         }
-        else if (field === 'topic') this.selectedTopic = value;
 
         this.currentPageLogs = 1; // Reset pagination
     }
@@ -1089,9 +1119,6 @@ export default class LandingAdminDashboard extends LightningElement {
         if (this.selectedModule) {
             filtered = filtered.filter(log => log.Module__c === this.selectedModule);
         }
-        if (this.selectedTopic) {
-            filtered = filtered.filter(log => log.Topic__c === this.selectedTopic);
-        }
 
         return this.paginateData(filtered, this.currentPageLogs);
     }
@@ -1107,9 +1134,6 @@ export default class LandingAdminDashboard extends LightningElement {
             }
             if (this.selectedModule) {
                 filtered = filtered.filter(log => log.Module__c === this.selectedModule);
-            }
-            if (this.selectedTopic) {
-                filtered = filtered.filter(log => log.Topic__c === this.selectedTopic);
             }
             return filtered.length;
         }
@@ -1154,8 +1178,7 @@ export default class LandingAdminDashboard extends LightningElement {
     @track syllabusForm = {
         Id: null,
         Course_Name__c: '',
-        Module_Name__c: '',
-        Topic_Name__c: ''
+        Module_Name__c: ''
     };
 
     get syllabusModalTitle() {
@@ -1166,8 +1189,7 @@ export default class LandingAdminDashboard extends LightningElement {
         this.syllabusForm = {
             Id: null,
             Course_Name__c: '',
-            Module_Name__c: '',
-            Topic_Name__c: ''
+            Module_Name__c: ''
         };
         this.isSyllabusModalOpen = true;
     }
@@ -1204,8 +1226,8 @@ export default class LandingAdminDashboard extends LightningElement {
     }
 
     saveSyllabusRecord() {
-        const { Course_Name__c, Module_Name__c, Topic_Name__c } = this.syllabusForm;
-        if (!Course_Name__c || !Module_Name__c || !Topic_Name__c) {
+        const { Course_Name__c, Module_Name__c } = this.syllabusForm;
+        if (!Course_Name__c || !Module_Name__c) {
             this.showToast('Error', 'All fields are required', 'error');
             return;
         }
@@ -1229,6 +1251,272 @@ export default class LandingAdminDashboard extends LightningElement {
     get isSyllabusFirstPage() { return this.currentPageSyllabus === 1; }
     get isSyllabusLastPage() { return this.currentPageSyllabus >= this.totalSyllabusPages; }
 
+    // --- Session Links Logic ---
+    @track sessionLinks = [];
+    @track currentPageSessionLinks = 1;
+    @track isSessionLinksModalOpen = false;
+    @track sessionLinksForm = {
+        Id: null,
+        Agenda__c: '',
+        Date__c: '',
+        Session_Start__c: '',
+        Session_End__c: '',
+        Session_URL__c: '',
+        Speaker__c: ''
+    };
+    @track sessionLinksErrors = {
+        agenda: false,
+        date: false,
+        startTime: false,
+        endTime: false,
+        url: false
+    };
+    wiredSessionLinksResult;
+
+    @wire(getAllSessionLinks)
+    wiredSessionLinks(result) {
+        console.log('Wire getAllSessionLinks fired');
+        console.log('Result:', JSON.stringify(result));
+
+        this.wiredSessionLinksResult = result;
+        if (result.data) {
+            console.log('Session links data received:', result.data.length, 'records');
+            this.sessionLinks = result.data.map(row => ({
+                ...row,
+                formattedDate: this.formatDate(row.Date__c),
+                formattedStartTime: this.formatTime(row.Session_Start__c),
+                formattedEndTime: this.formatTime(row.Session_End__c)
+            }));
+            console.log('Processed session links:', this.sessionLinks);
+        } else if (result.error) {
+            console.error('Error loading session links:', result.error);
+            console.error('Error details:', JSON.stringify(result.error));
+        }
+    }
+
+    get sessionLinksModalTitle() {
+        return this.sessionLinksForm.Id ? 'Edit Session Link' : 'Add New Session Link';
+    }
+
+    get agendaInputClass() {
+        return `premium-input ${this.sessionLinksErrors.agenda ? 'has-error' : ''}`;
+    }
+
+    get dateInputClass() {
+        return `premium-input ${this.sessionLinksErrors.date ? 'has-error' : ''}`;
+    }
+
+    get startTimeInputClass() {
+        return `premium-input ${this.sessionLinksErrors.startTime ? 'has-error' : ''}`;
+    }
+
+    get endTimeInputClass() {
+        return `premium-input ${this.sessionLinksErrors.endTime ? 'has-error' : ''}`;
+    }
+
+    get urlInputClass() {
+        return `premium-input ${this.sessionLinksErrors.url ? 'has-error' : ''}`;
+    }
+
+    openSessionLinksModal() {
+        this.sessionLinksForm = {
+            Id: null,
+            Agenda__c: '',
+            Date__c: '',
+            Session_Start__c: '',
+            Session_End__c: '',
+            Session_URL__c: '',
+            Speaker__c: ''
+        };
+        this.sessionLinksErrors = {
+            agenda: false,
+            date: false,
+            startTime: false,
+            endTime: false,
+            url: false
+        };
+        this.isSessionLinksModalOpen = true;
+    }
+
+    closeSessionLinksModal() {
+        this.isSessionLinksModalOpen = false;
+    }
+
+    handleSessionLinksInputChange(event) {
+        const field = event.target.dataset.field;
+        const value = event.target.value;
+        this.sessionLinksForm = { ...this.sessionLinksForm, [field]: value };
+
+        // Clear errors on input
+        if (field === 'Agenda__c') {
+            this.sessionLinksErrors = { ...this.sessionLinksErrors, agenda: false };
+        } else if (field === 'Date__c') {
+            this.sessionLinksErrors = { ...this.sessionLinksErrors, date: false };
+        } else if (field === 'Session_Start__c') {
+            this.sessionLinksErrors = { ...this.sessionLinksErrors, startTime: false };
+        } else if (field === 'Session_End__c') {
+            this.sessionLinksErrors = { ...this.sessionLinksErrors, endTime: false };
+        } else if (field === 'Session_URL__c') {
+            this.sessionLinksErrors = { ...this.sessionLinksErrors, url: false };
+        }
+    }
+
+    async saveSessionLinksRecord() {
+        // Validation
+        let isValid = true;
+        const newErrors = {
+            agenda: false,
+            date: false,
+            startTime: false,
+            endTime: false,
+            url: false
+        };
+
+        if (!this.sessionLinksForm.Agenda__c?.trim()) {
+            newErrors.agenda = true;
+            isValid = false;
+        }
+        if (!this.sessionLinksForm.Date__c) {
+            newErrors.date = true;
+            isValid = false;
+        }
+        if (!this.sessionLinksForm.Session_Start__c) {
+            newErrors.startTime = true;
+            isValid = false;
+        }
+        if (!this.sessionLinksForm.Session_End__c) {
+            newErrors.endTime = true;
+            isValid = false;
+        }
+        if (!this.sessionLinksForm.Session_URL__c?.trim()) {
+            newErrors.url = true;
+            isValid = false;
+        }
+
+        this.sessionLinksErrors = newErrors;
+
+        if (!isValid) {
+            this.showToast('Error', 'Please fill in all required fields', 'error');
+            return;
+        }
+
+        // Additional validation: End time should be after start time
+        if (this.sessionLinksForm.Session_Start__c && this.sessionLinksForm.Session_End__c) {
+            if (this.sessionLinksForm.Session_End__c <= this.sessionLinksForm.Session_Start__c) {
+                this.sessionLinksErrors = { ...this.sessionLinksErrors, endTime: true };
+                this.showToast('Error', 'End time must be after start time', 'error');
+                return;
+            }
+        }
+
+        try {
+            console.log('Saving session link...');
+            console.log('Session link form data:', JSON.stringify(this.sessionLinksForm));
+
+            // Build the session link object properly
+            // Remove Id field if it's null (for new records)
+            const sessionLinkToSave = {
+                Agenda__c: this.sessionLinksForm.Agenda__c,
+                Date__c: this.sessionLinksForm.Date__c,
+                Session_Start__c: this.sessionLinksForm.Session_Start__c + ':00.000', // Add seconds and milliseconds
+                Session_End__c: this.sessionLinksForm.Session_End__c + ':00.000',     // Add seconds and milliseconds
+                Session_URL__c: this.sessionLinksForm.Session_URL__c
+            };
+
+            // Only include Speaker if it has a value
+            if (this.sessionLinksForm.Speaker__c && this.sessionLinksForm.Speaker__c.trim()) {
+                sessionLinkToSave.Speaker__c = this.sessionLinksForm.Speaker__c;
+            }
+
+            // Only include Id if it exists (for updates)
+            if (this.sessionLinksForm.Id) {
+                sessionLinkToSave.Id = this.sessionLinksForm.Id;
+            }
+
+            console.log('Processed session link data:', JSON.stringify(sessionLinkToSave));
+
+            await saveSessionLink({
+                sessionLink: sessionLinkToSave
+            });
+
+            const message = this.sessionLinksForm.Id
+                ? 'Session link updated successfully'
+                : 'Session link created successfully';
+            this.showToast('Success', message, 'success');
+
+            this.closeSessionLinksModal();
+            return refreshApex(this.wiredSessionLinksResult);
+        } catch (error) {
+            console.error('Error saving session link:', error);
+            console.error('Error details:', JSON.stringify(error));
+
+            // Handle different error structures
+            let errorMessage = 'An error occurred while saving';
+            if (error.body && error.body.message) {
+                errorMessage = error.body.message;
+            } else if (error.message) {
+                errorMessage = error.message;
+            } else if (typeof error === 'string') {
+                errorMessage = error;
+            }
+
+            this.showToast('Error', errorMessage, 'error');
+        }
+    }
+
+    async handleSessionLinksAction(event) {
+        const action = event.currentTarget.dataset.action;
+        const rowId = event.currentTarget.dataset.id;
+
+        if (action === 'edit') {
+            const row = this.sessionLinks.find(r => r.Id === rowId);
+            if (row) {
+                this.sessionLinksForm = {
+                    Id: row.Id,
+                    Agenda__c: row.Agenda__c || '',
+                    Date__c: row.Date__c || '',
+                    Session_Start__c: row.Session_Start__c || '',
+                    Session_End__c: row.Session_End__c || '',
+                    Session_URL__c: row.Session_URL__c || '',
+                    Speaker__c: row.Speaker__c || ''
+                };
+                this.sessionLinksErrors = {
+                    agenda: false,
+                    date: false,
+                    startTime: false,
+                    endTime: false,
+                    url: false
+                };
+                this.isSessionLinksModalOpen = true;
+            }
+        } else if (action === 'delete') {
+            if (confirm('Are you sure you want to delete this session link? This action cannot be undone.')) {
+                try {
+                    await deleteSessionLink({
+                        sessionLinkId: rowId
+                    });
+                    this.showToast('Success', 'Session link deleted successfully', 'success');
+
+                    // Reset to first page if current page becomes empty
+                    if (this.visibleSessionLinks.length === 1 && this.currentPageSessionLinks > 1) {
+                        this.currentPageSessionLinks--;
+                    }
+
+                    return refreshApex(this.wiredSessionLinksResult);
+                } catch (error) {
+                    this.showToast('Error', error.body.message, 'error');
+                }
+            }
+        }
+    }
+
+    // --- Pagination for Session Links ---
+    get visibleSessionLinks() { return this.paginateData(this.sessionLinks, this.currentPageSessionLinks); }
+    get totalSessionLinksCount() { return this.sessionLinks ? this.sessionLinks.length : 0; }
+    get totalSessionLinksPages() { return Math.ceil(this.totalSessionLinksCount / this.pageSize); }
+    get isSessionLinksFirstPage() { return this.currentPageSessionLinks === 1; }
+    get isSessionLinksLastPage() { return this.currentPageSessionLinks >= this.totalSessionLinksPages; }
+
 
     // --- Pagination Handlers ---
     handlePrev(event) {
@@ -1240,6 +1528,7 @@ export default class LandingAdminDashboard extends LightningElement {
         if (tab === 'announcements' && this.currentPageAnnouncements > 1) this.currentPageAnnouncements--;
         if (tab === 'resources' && this.currentPageResources > 1) this.currentPageResources--;
         if (tab === 'syllabus' && this.currentPageSyllabus > 1) this.currentPageSyllabus--;
+        if (tab === 'sessionlinks' && this.currentPageSessionLinks > 1) this.currentPageSessionLinks--;
     }
 
     handleNext(event) {
@@ -1251,6 +1540,7 @@ export default class LandingAdminDashboard extends LightningElement {
         if (tab === 'announcements' && this.currentPageAnnouncements < this.totalAnnouncementsPages) this.currentPageAnnouncements++;
         if (tab === 'resources' && this.currentPageResources < this.totalResourcesPages) this.currentPageResources++;
         if (tab === 'syllabus' && this.currentPageSyllabus < this.totalSyllabusPages) this.currentPageSyllabus++;
+        if (tab === 'sessionlinks' && this.currentPageSessionLinks < this.totalSessionLinksPages) this.currentPageSessionLinks++;
     }
 
     // --- Navigation ---
@@ -1271,6 +1561,7 @@ export default class LandingAdminDashboard extends LightningElement {
         refreshApex(this.wiredMetricsResult);
         refreshApex(this.wiredStatsResult);
         refreshApex(this.wiredActivitiesResult);
+        refreshApex(this.wiredLogsResult);
     }
 
     // --- Actions ---
@@ -1674,5 +1965,18 @@ export default class LandingAdminDashboard extends LightningElement {
     // --- Helpers ---
     showToast(title, message, variant) {
         this.dispatchEvent(new ShowToastEvent({ title, message, variant }));
+    }
+
+    // --- Navigation ---
+    handleTabSwitch(event) {
+        this.currentTab = event.currentTarget.dataset.tab;
+    }
+
+    handleLogout() {
+        this.dispatchEvent(new CustomEvent('logout'));
+    }
+
+    handleNavigateToTasks() {
+        this.currentTab = 'tasks';
     }
 }

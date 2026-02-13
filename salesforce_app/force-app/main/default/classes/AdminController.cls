@@ -110,14 +110,14 @@ public without sharing class AdminController {
     public static List<Daily_Log__c> getAllDailyLogs(String token) {
         Admin_User__c admin = getAuthenticatedAdmin(token);
         if (admin.Role__c == 'Super Admin') {
-            return [SELECT Id, Intern__r.Name, Log_Date__c, Hours_Spent__c, Work_Description__c 
+            return [SELECT Id, Intern__r.Name, Log_Date__c, Hours_Spent__c, Work_Description__c, Course__c, Module__c, Topic__c 
                     FROM Daily_Log__c 
-                    ORDER BY Log_Date__c DESC LIMIT 100];
+                    ORDER BY Log_Date__c DESC LIMIT 500];
         } else {
-            return [SELECT Id, Intern__r.Name, Log_Date__c, Hours_Spent__c, Work_Description__c 
+            return [SELECT Id, Intern__r.Name, Log_Date__c, Hours_Spent__c, Work_Description__c, Course__c, Module__c, Topic__c 
                     FROM Daily_Log__c 
                     WHERE Intern__r.Team_Lead__c = :admin.Id 
-                    ORDER BY Log_Date__c DESC LIMIT 100];
+                    ORDER BY Log_Date__c DESC LIMIT 500];
         }
     }
 
@@ -456,18 +456,51 @@ public without sharing class AdminController {
     // --- Course Syllabus Management ---
     @AuraEnabled(cacheable=true)
     public static List<Course_Syllabus__c> getAllSyllabus() {
-        return [SELECT Id, Course_Name__c, Module_Name__c, Topic_Name__c 
+        return [SELECT Id, Course_Name__c, Module_Name__c 
                 FROM Course_Syllabus__c 
-                ORDER BY Course_Name__c, Module_Name__c, Topic_Name__c];
+                ORDER BY Course_Name__c, Module_Name__c];
     }
 
     @AuraEnabled
     public static void saveSyllabus(Course_Syllabus__c syllabus) {
-        try { upsert syllabus; } catch (Exception e) { throw new AuraHandledException(e.getMessage()); }
+        try { 
+            // Handle required Topic_Name__c constraint if field exists
+            // We set a default value to satisfy database requirements even though the field is hidden in UI
+            syllabus.Topic_Name__c = 'General'; 
+            upsert syllabus; 
+        } catch (Exception e) { throw new AuraHandledException(e.getMessage()); }
     }
 
     @AuraEnabled
     public static void deleteSyllabus(Id syllabusId) {
         try { delete [SELECT Id FROM Course_Syllabus__c WHERE Id = :syllabusId]; } catch (Exception e) { throw new AuraHandledException(e.getMessage()); }
+    }
+
+    // --- Class Session Links Management ---
+    @AuraEnabled(cacheable=true)
+    public static List<Class_Session_Links__c> getAllSessionLinks() {
+        return [SELECT Id, Name, Agenda__c, Date__c, Session_Start__c,
+                       Session_End__c, Session_URL__c, Speaker__c,
+                       CreatedDate, LastModifiedDate
+                FROM Class_Session_Links__c
+                ORDER BY Date__c DESC, Session_Start__c ASC];
+    }
+
+    @AuraEnabled
+    public static void saveSessionLink(Class_Session_Links__c sessionLink) {
+        try {
+            upsert sessionLink;
+        } catch (Exception e) {
+            throw new AuraHandledException(e.getMessage());
+        }
+    }
+
+    @AuraEnabled
+    public static void deleteSessionLink(Id sessionLinkId) {
+        try {
+            delete [SELECT Id FROM Class_Session_Links__c WHERE Id = :sessionLinkId];
+        } catch (Exception e) {
+            throw new AuraHandledException(e.getMessage());
+        }
     }
 }

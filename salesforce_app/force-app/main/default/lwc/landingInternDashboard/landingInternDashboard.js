@@ -23,6 +23,7 @@ import uploadProfileImage from '@salesforce/apex/InternWorkController.uploadProf
 import submitMentorshipRequest from '@salesforce/apex/InternWorkController.submitMentorshipRequest';
 import getMentorshipRequests from '@salesforce/apex/InternWorkController.getMentorshipRequests';
 import getSyllabus from '@salesforce/apex/InternWorkController.getSyllabus';
+import getClassSessionLinks from '@salesforce/apex/InternWorkController.getClassSessionLinks';
 import LEARNERS_BYTE_LOGO from '@salesforce/resourceUrl/LearnersByteExpertpedia';
 
 export default class LandingInternDashboard extends LightningElement {
@@ -173,6 +174,9 @@ export default class LandingInternDashboard extends LightningElement {
     // Announcements State
     @track announcements = [];
 
+    // Class Session Links State
+    @track sessionLinks = [];
+
     // Time and Date Display
     @track currentTime = '';
     @track currentDate = '';
@@ -181,6 +185,7 @@ export default class LandingInternDashboard extends LightningElement {
     connectedCallback() {
         this.refreshData();
         this.loadSyllabus();
+        this.refreshSessionLinks();
         // Update date/time display
         this.updateDateTime();
         this.timeInterval = setInterval(() => {
@@ -323,6 +328,7 @@ export default class LandingInternDashboard extends LightningElement {
     prevWorkLogsPage() { if (this.workLogsPage > 1) this.workLogsPage--; }
     nextWorkLogsPage() { if (!this.isWorkLogsLastPage) this.workLogsPage++; }
 
+
     // Mentorship Pagination
     @track mentorshipPage = 1;
     get visibleMentorshipRequests() {
@@ -336,6 +342,22 @@ export default class LandingInternDashboard extends LightningElement {
 
     prevMentorshipPage() { if (this.mentorshipPage > 1) this.mentorshipPage--; }
     nextMentorshipPage() { if (!this.isMentorshipLastPage) this.mentorshipPage++; }
+
+
+    // Attendance History Pagination
+    @track historyPage = 1;
+    get visibleHistory() {
+        if (!this.history) return [];
+        const start = (this.historyPage - 1) * this.pageSize;
+        return this.history.slice(start, start + this.pageSize);
+    }
+    get isFirstHistoryPage() { return this.historyPage === 1; }
+    get isLastHistoryPage() { return this.historyPage >= Math.ceil(this.history.length / this.pageSize); }
+    get totalHistoryPages() { return Math.ceil(this.history.length / this.pageSize) || 1; }
+
+    handleHistoryPrev() { if (this.historyPage > 1) this.historyPage--; }
+    handleHistoryNext() { if (!this.isLastHistoryPage) this.historyPage++; }
+
 
 
     // Mentorship State
@@ -360,6 +382,81 @@ export default class LandingInternDashboard extends LightningElement {
         } catch (e) {
             console.error('Error fetching mentorship requests', e);
         }
+    }
+
+    async refreshSessionLinks() {
+        try {
+            console.log('Fetching class session links...');
+            const data = await getClassSessionLinks();
+            console.log('Session links received:', data ? data.length : 0, 'records');
+            console.log('Session data:', JSON.stringify(data));
+
+            // Process session links to add computed properties for UI
+            this.sessionLinks = data.map((session, index) => {
+                // Determine color based on index for variety
+                const colors = ['blue', 'purple', 'green', 'orange', 'teal', 'pink'];
+                const colorClass = colors[index % colors.length];
+
+                // Check if session is happening today
+                const sessionDate = new Date(session.Date__c);
+                const today = new Date();
+                const isToday = sessionDate.toDateString() === today.toDateString();
+
+                // Check if session is upcoming (future)
+                const isUpcoming = sessionDate > today;
+
+                return {
+                    ...session,
+                    colorClass: colorClass,
+                    isToday: isToday,
+                    isUpcoming: isUpcoming,
+                    formattedDate: this.formatSessionDate(session.Date__c),
+                    formattedStartTime: this.formatTime(session.Session_Start__c),
+                    formattedEndTime: this.formatTime(session.Session_End__c)
+                };
+            });
+            console.log('Processed session links:', this.sessionLinks);
+        } catch (e) {
+            console.error('Error fetching session links', e);
+            console.error('Error details:', JSON.stringify(e));
+        }
+    }
+
+    formatSessionDate(dateString) {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        const options = { weekday: 'short', month: 'short', day: 'numeric' };
+        return date.toLocaleDateString('en-US', options);
+    }
+
+    formatTime(timeValue) {
+        if (!timeValue && timeValue !== 0) return '';
+
+        let hours, minutes;
+
+        // Check if timeValue is a number (milliseconds since midnight)
+        if (typeof timeValue === 'number') {
+            // Convert milliseconds to hours and minutes
+            const totalMinutes = Math.floor(timeValue / 60000);
+            hours = Math.floor(totalMinutes / 60);
+            minutes = totalMinutes % 60;
+        } else {
+            // timeValue is a string in format "HH:MM:SS.sss" or "HH:MM:SS"
+            const parts = timeValue.split(':');
+            if (parts.length < 2) return timeValue;
+            hours = parseInt(parts[0]);
+            minutes = parts[1];
+        }
+
+        // Convert to 12-hour format with AM/PM
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12; // 0 should be 12
+
+        // Ensure minutes is two digits
+        const minutesStr = typeof minutes === 'number' ? minutes.toString().padStart(2, '0') : minutes;
+
+        return `${hours}:${minutesStr} ${ampm}`;
     }
 
     handleMentorshipInput(event) {
@@ -398,7 +495,7 @@ export default class LandingInternDashboard extends LightningElement {
         description: '',
         hours: 0,
         course: '',
-        module: '',
+        module: [], // Changed to array for multi-select
         topic: '',
         submissionLink: '',
         learnings: '',
@@ -408,14 +505,21 @@ export default class LandingInternDashboard extends LightningElement {
         return !this.logForm.course;
     }
 
-    get isTopicDisabled() {
-        return !this.logForm.module;
-    }
+
     // Syllabus Data
     @track fullSyllabus = [];
     @track courseOptions = [];
     @track moduleOptions = [];
-    @track topicOptions = [];
+
+    get maxEntryDate() {
+        return new Date().toISOString().split('T')[0];
+    }
+
+    get minEntryDate() {
+        const d = new Date();
+        d.setDate(d.getDate() - 7);
+        return d.toISOString().split('T')[0];
+    }
 
     async refreshWorkLogs() {
         try {
@@ -441,7 +545,7 @@ export default class LandingInternDashboard extends LightningElement {
 
     handleCourseChange(event) {
         const selectedCourse = event.target.value;
-        this.logForm = { ...this.logForm, course: selectedCourse, module: '', topic: '' };
+        this.logForm = { ...this.logForm, course: selectedCourse, module: [] };
 
         // Filter Modules for this Course
         const modules = new Set(
@@ -450,24 +554,12 @@ export default class LandingInternDashboard extends LightningElement {
                 .map(item => item.Module_Name__c)
         );
         this.moduleOptions = Array.from(modules).map(m => ({ label: m, value: m }));
-        this.topicOptions = []; // Reset topics
     }
 
     handleModuleChange(event) {
-        const selectedModule = event.target.value;
-        this.logForm = { ...this.logForm, module: selectedModule, topic: '' };
-
-        // Filter Topics for this Module (and Course)
-        const topics = new Set(
-            this.fullSyllabus
-                .filter(item => item.Course_Name__c === this.logForm.course && item.Module_Name__c === selectedModule)
-                .map(item => item.Topic_Name__c)
-        );
-        this.topicOptions = Array.from(topics).map(t => ({ label: t, value: t }));
-    }
-
-    handleTopicChange(event) {
-        this.logForm.topic = event.target.value;
+        // Multi-select returns an array of values
+        const selectedModules = event.detail.value;
+        this.logForm = { ...this.logForm, module: selectedModules };
     }
 
     handleLogInput(event) {
@@ -490,7 +582,7 @@ export default class LandingInternDashboard extends LightningElement {
                 description: this.logForm.description,
                 hours: this.logForm.hours,
                 course: this.logForm.course,
-                module: this.logForm.module,
+                module: this.logForm.module.join(', '), // Convert array to CSV string
                 topic: this.logForm.topic,
                 submissionLink: this.logForm.submissionLink,
                 learnings: this.logForm.learnings,
@@ -502,14 +594,13 @@ export default class LandingInternDashboard extends LightningElement {
                 description: '',
                 hours: 0,
                 course: '',
-                module: '',
+                module: [],
                 topic: '',
                 submissionLink: '',
                 learnings: '',
                 blockers: ''
             };
             this.moduleOptions = [];
-            this.topicOptions = [];
 
             await this.refreshWorkLogs();
             alert('Diary Entry Submitted Successfully!');
@@ -782,6 +873,16 @@ export default class LandingInternDashboard extends LightningElement {
 
             // 2. Attendance History
             this.history = await getAttendanceHistory({ token: this.token });
+            console.log('DEBUG: Attendance History Data:', JSON.parse(JSON.stringify(this.history)));
+
+            // NORMALIZE STATUS (Handle Field Name Case Sensitivity)
+            if (this.history) {
+                this.history = this.history.map(row => ({
+                    ...row,
+                    Status__c: row.Status__c || row.status__c || row.Status || ''
+                }));
+            }
+
             this.tasks = await getTasks({ token: this.token });
 
             // Get Analytics
@@ -1040,6 +1141,72 @@ export default class LandingInternDashboard extends LightningElement {
     handleTaskInput(event) {
         const field = event.target.name;
         this.selectedTask = { ...this.selectedTask, [field]: event.target.value };
+    }
+
+    handleStatusCardClick(event) {
+        const status = event.currentTarget.dataset.status;
+        this.selectedTask = { ...this.selectedTask, Status__c: status };
+    }
+
+    // Status Card Classes
+    get statusCardAssignedClass() {
+        const isSelected = this.selectedTask?.Status__c === 'Assigned';
+        return `status-card status-card-assigned${isSelected ? ' status-card-selected' : ''}`;
+    }
+
+    get statusCardInProgressClass() {
+        const isSelected = this.selectedTask?.Status__c === 'In Progress';
+        return `status-card status-card-inprogress${isSelected ? ' status-card-selected' : ''}`;
+    }
+
+    get statusCardCompletedClass() {
+        const isSelected = this.selectedTask?.Status__c === 'Completed';
+        return `status-card status-card-completed${isSelected ? ' status-card-selected' : ''}`;
+    }
+
+    // Progress Tracker Classes
+    get progressStepAssignedClass() {
+        const currentStatus = this.selectedTask?.Status__c;
+        let className = 'progress-step progress-step-assigned';
+        if (currentStatus === 'Assigned' || currentStatus === 'In Progress' || currentStatus === 'Completed') {
+            className += ' progress-step-active';
+        }
+        if (currentStatus === 'Assigned') {
+            className += ' progress-step-current';
+        }
+        return className;
+    }
+
+    get progressStepInProgressClass() {
+        const currentStatus = this.selectedTask?.Status__c;
+        let className = 'progress-step progress-step-inprogress';
+        if (currentStatus === 'In Progress' || currentStatus === 'Completed') {
+            className += ' progress-step-active';
+        }
+        if (currentStatus === 'In Progress') {
+            className += ' progress-step-current';
+        }
+        return className;
+    }
+
+    get progressStepCompletedClass() {
+        const currentStatus = this.selectedTask?.Status__c;
+        let className = 'progress-step progress-step-completed';
+        if (currentStatus === 'Completed') {
+            className += ' progress-step-active progress-step-current';
+        }
+        return className;
+    }
+
+    get progressLineClass() {
+        const currentStatus = this.selectedTask?.Status__c;
+        let className = 'progress-line';
+        if (currentStatus === 'In Progress') {
+            className += ' progress-line-50';
+        } else if (currentStatus === 'Completed') {
+            className += ' progress-line-100';
+        }
+        return className;
     }
 
     async handleSaveTask() {
