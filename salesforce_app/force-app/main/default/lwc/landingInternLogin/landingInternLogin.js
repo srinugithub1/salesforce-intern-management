@@ -246,8 +246,13 @@ export default class LandingInternLogin extends LightningElement {
                 errorMessage = 'Give me your Registered Email address.';
             }
 
-            this.error = `Registration failed: ${errorMessage}`;
-            this.showToast('Error', 'Unable to create account', 'error');
+            // User-Friendly Error Masking (Fix for 429/Quota Errors)
+            if (errorMessage.includes('429') || errorMessage.includes('Quota') || errorMessage.includes('Limit') || errorMessage.includes('RESOURCE_EXHAUSTED')) {
+                errorMessage = 'Server is currently busy. Please wait a moment and try again.';
+            }
+
+            this.error = `${errorMessage}`;
+            this.showToast('Error', errorMessage, 'error');
 
             try {
                 await LightningAlert.open({

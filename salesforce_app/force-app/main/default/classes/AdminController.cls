@@ -1,506 +1,624 @@
 public without sharing class AdminController {
-    // Sync Version 2.0 - Forced Refresh
     
-    public class AdminMetrics {
+    // --- Helper for Token Validation ---
+    private static Map<String, Object> getAuthenticatedAdmin(String token) {
+        if (String.isBlank(token)) throw new AuraHandledException('Session Expired. Please login again.');
+        if (String.isBlank(token)) throw new AuraHandledException('Session Expired. Please login again.');
+        List<List<Object>> rows = GoogleSheetsService.getSheetData('Admins', true);
+        for (Integer i = 1; i < rows.size(); i++) {
+            List<Object> row = rows[i];
+            if (row.size() > 5 && (String) row[5] == token) {
+                Map<String, Object> admin = new Map<String, Object>();
+                admin.put('Id', row[0]);
+                admin.put('Role__c', row.size()>4 ? row[4] : 'Team Lead');
+                return admin;
+            }
+        }
+        throw new AuraHandledException('Invalid Session');
+    }
+    
+    private static Date parseDate(Object val) {
+        if (val == null || String.isBlank(String.valueOf(val))) return null;
+        try { return Date.valueOf((String)val); } catch(Exception e) { return null; }
+    }
+    
+    private static DateTime parseDateTime(Object val) {
+        if (val == null || String.isBlank(String.valueOf(val))) return null;
+        try { return DateTime.valueOf((String)val); } catch(Exception e) { return null; }
+    }
+    
+    private static String generateUUID() {
+        Blob b = Crypto.generateAesKey(128);
+        String h = EncodingUtil.convertToHex(b);
+        return h.substring(0,8)+'-'+h.substring(8,12)+'-'+h.substring(12,16)+'-'+h.substring(16,20)+'-'+h.substring(20);
+    }
+    
+    // --- INTERNS ---
+    @AuraEnabled(cacheable=true)
+    public static List<Map<String, Object>> getAllInterns(String token) {
+        Map<String, Object> admin = getAuthenticatedAdmin(token);
+        String adminId = (String) admin.get('Id');
+        String role = (String) admin.get('Role__c');
+        List<Map<String, Object>> interns = new List<Map<String, Object>>();
+        List<List<Object>> rows = GoogleSheetsService.getSheetData('Interns', true);
+        for (Integer i = 1; i < rows.size(); i++) {
+             List<Object> r = rows[i];
+             String tlId = r.size()>12 ? (String)r[12] : '';
+             if (role == 'Super Admin' || tlId == adminId) {
+                 Map<String, Object> m = new Map<String, Object>();
+                 m.put('Id', r[0]);
+                 m.put('Name', r[1]);
+                 m.put('Email__c', r[2]);
+                 m.put('Phone__c', r[3]);
+                 m.put('College_Name__c', r.size()>5?r[5]:'');
+                 m.put('Roll_Number__c', r.size()>6?r[6]:'');
+                 m.put('Address__c', r.size()>7?r[7]:'');
+                 m.put('Start_Date__c', parseDate(r.size()>10?r[10]:null));
+                 m.put('End_Date__c', parseDate(r.size()>11?r[11]:null));
+                 interns.add(m);
+             }
+        }
+        return interns;
+    }
+    
+    @AuraEnabled
+    public static void saveIntern(Map<String, Object> intern) {
+         try {
+             String id = (String) intern.get('Id');
+             List<List<Object>> rows = GoogleSheetsService.getSheetData('Interns');
+             for (Integer i = 1; i < rows.size(); i++) {
+                 if ((String) rows[i][0] == id) {
+                     List<Object> newRow = rows[i].clone();
+                     if (intern.containsKey('Start_Date__c')) newRow[10] = String.valueOf(intern.get('Start_Date__c'));
+                     if (intern.containsKey('End_Date__c')) newRow[11] = String.valueOf(intern.get('End_Date__c'));
+                     if (intern.containsKey('Team_Lead__c')) {
+                         while (newRow.size() <= 12) newRow.add('');
+                         newRow[12] = intern.get('Team_Lead__c');
+                     }
+                     GoogleSheetsService.updateRow('Interns', i + 1, newRow);
+                     return;
+                 }
+             }
+         } catch(Exception e) { throw new AuraHandledException(e.getMessage()); }
+    }
+    
+    @AuraEnabled
+    public static void deleteIntern(String internId) {
+        try { deleteRowById('Interns', internId); } catch(Exception e) { throw new AuraHandledException(e.getMessage()); }
+    }
+
+    // --- LEAVES ---
+    @AuraEnabled(cacheable=true)
+    public static List<Map<String, Object>> getAllLeaveRequests(String token) {
+        Map<String, Object> admin = getAuthenticatedAdmin(token);
+        String adminId = (String) admin.get('Id');
+        String role = (String) admin.get('Role__c');
+        Map<String, String> internNames = getInternNameMap();
+        List<Map<String, Object>> leaves = new List<Map<String, Object>>();
+        List<List<Object>> rows = GoogleSheetsService.getSheetData('Leaves', true);
+        List<List<Object>> internRows = GoogleSheetsService.getSheetData('Interns', true);
+        for (Integer i = rows.size() - 1; i >= 1; i--) {
+             String iId = (String) rows[i][1];
+             if (hasAccess(role, adminId, iId, internRows)) {
+                 Map<String, Object> r = new Map<String, Object>();
+                 r.put('Id', rows[i][0]);
+                 Map<String, Object> internRel = new Map<String, Object>();
+                 internRel.put('Name', internNames.get(iId));
+                 r.put('Intern__r', internRel);
+                 r.put('Start_Date__c', parseDate(rows[i][2]));
+                 r.put('End_Date__c', parseDate(rows[i][3]));
+                 r.put('Reason__c', rows[i][4]);
+                 r.put('Status__c', rows[i][5]);
+                 leaves.add(r);
+             }
+        }
+        return leaves;
+    }
+    
+    @AuraEnabled
+    public static void updateLeaveStatus(String leaveId, String status) {
+        try {
+            List<List<Object>> rows = GoogleSheetsService.getSheetData('Leaves');
+            for (Integer i = 1; i < rows.size(); i++) {
+                if ((String) rows[i][0] == leaveId) {
+                    List<Object> newRow = rows[i].clone();
+                    newRow[5] = status;
+                    GoogleSheetsService.updateRow('Leaves', i+1, newRow);
+                    return;
+                }
+            }
+        } catch(Exception e) { throw new AuraHandledException(e.getMessage()); }
+    }
+
+    // --- MENTORSHIP ---
+    @AuraEnabled(cacheable=true)
+    public static List<Map<String, Object>> getAllMentorshipRequests(String token) {
+         Map<String, Object> admin = getAuthenticatedAdmin(token);
+         Map<String, String> names = getInternNameMap();
+         List<Map<String, Object>> res = new List<Map<String, Object>>();
+         List<List<Object>> rows = GoogleSheetsService.getSheetData('Mentorships');
+         for (Integer i = rows.size()-1; i>=1; i--) {
+             String iId = (String) rows[i][1];
+             Map<String, Object> r = new Map<String, Object>();
+             r.put('Id', rows[i][0]);
+             Map<String, Object> ir = new Map<String, Object>();
+             ir.put('Name', names.get(iId));
+             r.put('Intern__r', ir);
+             r.put('Request_Type__c', rows[i][2]);
+             r.put('Description__c', rows[i][3]);
+             r.put('Status__c', rows[i][4]);
+             r.put('Mentor_Response__c', rows[i].size()>5?rows[i][5]:'');
+             r.put('CreatedDate', parseDateTime(rows[i].size()>6?rows[i][6]:null));
+             res.add(r);
+         }
+         return res;
+    }
+    
+    @AuraEnabled
+    public static void replyToMentorship(String requestId, String response, String status) {
+         try {
+            List<List<Object>> rows = GoogleSheetsService.getSheetData('Mentorships', true);
+            for (Integer i = 1; i < rows.size(); i++) {
+                if ((String) rows[i][0] == requestId) {
+                    List<Object> newRow = rows[i].clone();
+                    while (newRow.size() <= 5) newRow.add('');
+                    newRow[4] = status;
+                    newRow[5] = response;
+                    GoogleSheetsService.updateRow('Mentorships', i+1, newRow);
+                    return;
+                }
+            }
+         } catch(Exception e) { throw new AuraHandledException(e.getMessage()); }
+    }
+
+    // --- DAILY LOGS ---
+    @AuraEnabled(cacheable=true)
+    public static List<Map<String, Object>> getAllDailyLogs(String token) {
+        Map<String, String> names = getInternNameMap();
+        List<Map<String, Object>> res = new List<Map<String, Object>>();
+        List<List<Object>> rows = GoogleSheetsService.getSheetData('DailyLogs', true);
+        for (Integer i = rows.size()-1; i>=1; i--) {
+             String iId = (String) rows[i][1];
+             Map<String, Object> r = new Map<String, Object>();
+             r.put('Id', rows[i][0]);
+             Map<String, Object> ir = new Map<String, Object>();
+             ir.put('Name', names.get(iId));
+             r.put('Intern__r', ir);
+             r.put('Log_Date__c', parseDate(rows[i][2]));
+             r.put('Work_Description__c', rows[i].size()>3?rows[i][3]:'');
+             r.put('Hours_Spent__c', rows[i].size()>4?rows[i][4]:0);
+             r.put('Course__c', rows[i].size()>5?rows[i][5]:'');
+             r.put('Module__c', rows[i].size()>6?rows[i][6]:'');
+             r.put('Topic__c', rows[i].size()>7?rows[i][7]:'');
+             res.add(r);
+             if (res.size() >= 500) break;
+        }
+        return res;
+    }
+
+    // --- ANNOUNCEMENTS ---
+    @AuraEnabled(cacheable=true)
+    public static List<Map<String, Object>> getAllAnnouncements() {
+        return InternWorkController.getAnnouncements(null); 
+    }
+    
+    @AuraEnabled
+    public static void saveAnnouncement(Map<String, Object> announcement) {
+         try {
+             String msg = (String) announcement.get('Message__c');
+             String type = (String) announcement.get('Type__c');
+             String id = (String) announcement.get('Id');
+             if (String.isBlank(id)) {
+                 List<Object> newRow = new List<Object>{ generateUUID(), msg, type, String.valueOf(System.today()), '', 'TRUE' };
+                 GoogleSheetsService.appendRow('Announcements', newRow);
+             }
+         } catch(Exception e) { throw new AuraHandledException(e.getMessage()); }
+    }
+    
+    @AuraEnabled
+    public static void deleteAnnouncement(String announcementId) { deleteRowById('Announcements', announcementId); }
+    
+    @AuraEnabled
+    public static void deleteResource(String resourceId) { deleteRowById('Resources', resourceId); }
+    
+    @AuraEnabled(cacheable=true)
+    public static List<Map<String, Object>> getAllResources(String token) {
+        return InternWorkController.getResources(token); 
+    }
+    
+    @AuraEnabled
+    public static void saveResource(Map<String, Object> resource) {
+         try {
+             String t = (String) resource.get('Title__c');
+             String l = (String) resource.get('Link__c');
+             String type = (String) resource.get('Type__c');
+             String d = (String) resource.get('Description__c');
+             List<Object> newRow = new List<Object>{ generateUUID(), t, d, l, type, String.valueOf(System.now()) };
+             GoogleSheetsService.appendRow('Resources', newRow);
+         } catch(Exception e) {}
+    }
+
+    // --- TASKS ---
+    @AuraEnabled
+    public static List<Map<String, Object>> getAllTasks(String token) {
+         Map<String, String> names = getInternNameMap();
+         List<Map<String, Object>> res = new List<Map<String, Object>>();
+         List<List<Object>> rows = GoogleSheetsService.getSheetData('Tasks');
+         for (Integer i = 1; i < rows.size(); i++) {
+             List<Object> row = rows[i];
+             String iId = row.size() > 1 ? (String) row[1] : '';
+             Map<String, Object> r = new Map<String, Object>();
+             r.put('Id', row.size() > 0 ? row[0] : '');
+             r.put('Name', row.size() > 2 ? row[2] : '');
+             Map<String, Object> ir = new Map<String, Object>();
+             ir.put('Name', names.get(iId));
+             r.put('Intern__r', ir);
+             r.put('Status__c', row.size() > 4 ? row[4] : '');
+             r.put('Due_Date__c', parseDate(row.size() > 5 ? row[5] : null));
+             r.put('Priority__c', row.size() > 8 ? row[8] : '');
+             r.put('Description__c', row.size() > 3 ? row[3] : '');
+             if(row.size() > 10) r.put('CreatedDate', parseDateTime(row[10]));
+             res.add(r);
+         }
+         return res;
+    }
+    
+    @AuraEnabled
+    public static void saveTask(Map<String, Object> task) {
+         try {
+             String id = (String) task.get('Id');
+             String name = (String) task.get('Name');
+             String descriptionStr = (String) task.get('Description__c');
+             String pri = (String) task.get('Priority__c');
+             Date due = parseDate(task.get('Due_Date__c'));
+             String internId = (String) task.get('Intern__c');
+             String status = (String) task.get('Status__c');
+             
+             if (String.isNotBlank(id)) {
+                 List<List<Object>> rows = GoogleSheetsService.getSheetData('Tasks', true);
+                 for (Integer i = 1; i < rows.size(); i++) {
+                     if (rows[i].size() > 0 && (String) rows[i][0] == id) {
+                         List<Object> row = rows[i].clone();
+                         while(row.size() <= 8) row.add('');
+                         row[2] = name;
+                         row[3] = descriptionStr;
+                         if (status != null) row[4] = status;
+                         row[5] = String.valueOf(due);
+                         row[8] = pri;
+                         if (internId != null) row[1] = internId;
+                         
+                         GoogleSheetsService.updateRow('Tasks', i + 1, row);
+                         return;
+                     }
+                 }
+             } else {
+                 // Fallback if ID is passing but not found, or used incorrectly as create.
+             }
+         } catch(Exception e) { throw new AuraHandledException(e.getMessage()); }
+    }
+    
+    @AuraEnabled
+    public static void deleteTask(String taskId) { deleteRowById('Tasks', taskId); }
+
+    @AuraEnabled
+    public static void assignTaskToInterns(Map<String, Object> taskTemplate, List<String> targetInternIds, Boolean assignToAll, String token) {
+         try {
+             List<List<Object>> interns = GoogleSheetsService.getSheetData('Interns', true);
+             for (Integer i = 1; i < interns.size(); i++) {
+                 if (interns[i].size() > 0) {
+                     String iId = (String) interns[i][0];
+                     Boolean match = assignToAll;
+                     if (!match && targetInternIds != null) match = targetInternIds.contains(iId);
+                     
+                     if (match) {
+                         String name = (String) taskTemplate.get('Name');
+                         String descriptionStr = (String) taskTemplate.get('Description__c');
+                         String pri = (String) taskTemplate.get('Priority__c');
+                         Date due = parseDate(taskTemplate.get('Due_Date__c'));
+                         List<Object> newRow = new List<Object>{ generateUUID(), iId, name, descriptionStr, 'Assigned', String.valueOf(due), '', '', pri, '', String.valueOf(System.now()) };
+                         GoogleSheetsService.appendRow('Tasks', newRow);
+                     }
+                 }
+             }
+         } catch(Exception e) { throw new AuraHandledException(e.getMessage()); }
+    }
+
+    // --- HELPERS ---
+    private static Map<String, String> getInternNameMap() {
+        Map<String, String> m = new Map<String, String>();
+        List<List<Object>> rows = GoogleSheetsService.getSheetData('Interns', true);
+        for (Integer i = 1; i < rows.size(); i++) {
+            if (rows[i].size() > 1) m.put((String)rows[i][0], (String)rows[i][1]);
+        }
+        return m;
+    }
+    
+    private static Boolean hasAccess(String role, String adminId, String internId, List<List<Object>> internRows) {
+        if (role == 'Super Admin') return true;
+        for (Integer i = 1; i < internRows.size(); i++) {
+            if ((String) internRows[i][0] == internId) {
+                if (internRows[i].size() > 12 && (String) internRows[i][12] == adminId) return true;
+            }
+        }
+        return false;
+    }
+
+    private static void deleteRowById(String sheetName, String id) {
+        List<List<Object>> rows = GoogleSheetsService.getSheetData(sheetName, true);
+        for (Integer i = 1; i < rows.size(); i++) {
+            if ((String) rows[i][0] == id) {
+                GoogleSheetsService.deleteRow(sheetName, i + 1);
+                return;
+            }
+        }
+    }
+    
+    public class ActivityWrapper {
+        @AuraEnabled public String id;
+        @AuraEnabled public String type;
+        @AuraEnabled public String message;
+        @AuraEnabled public Datetime activityDate;
+    }
+    
+    @AuraEnabled(cacheable=true)
+    public static List<ActivityWrapper> getRecentActivities(String token) {
+        return new List<ActivityWrapper>();
+    }
+    
+    @AuraEnabled
+    public static Map<String, Object> getFilteredTasks(String internName, String taskName, Date dueDate, String status, Integer pageSize, Integer pageNumber, String token) {
+        List<Map<String, Object>> allTasks = getAllTasks(token);
+        List<Map<String, Object>> filtered = new List<Map<String, Object>>();
+        
+        String iName = (internName == null) ? '' : internName.toLowerCase();
+        String tName = (taskName == null) ? '' : taskName.toLowerCase();
+        
+        for (Map<String, Object> t : allTasks) {
+            Boolean match = true;
+            
+            // Filter by Intern Name
+            if (String.isNotBlank(iName)) {
+                Map<String, Object> intern = (Map<String, Object>) t.get('Intern__r');
+                String name = (intern != null && intern.containsKey('Name')) ? (String) intern.get('Name') : '';
+                if (name == null || !name.toLowerCase().contains(iName)) match = false;
+            }
+            
+            // Filter by Task Name
+            if (match && String.isNotBlank(tName)) {
+                String name = (String) t.get('Name');
+                if (name == null || !name.toLowerCase().contains(tName)) match = false;
+            }
+            
+            // Filter by Due Date
+            if (match && dueDate != null) {
+                Date d = (Date) t.get('Due_Date__c');
+                if (d == null || d != dueDate) match = false;
+            }
+            
+            // Filter by Status
+            if (match && String.isNotBlank(status) && status != 'All') {
+                String s = (String) t.get('Status__c');
+                if (s == null || s != status) match = false;
+            }
+            
+            if (match) filtered.add(t);
+        }
+        
+        // Sorting (Optional, by Date DESC)
+        // ...
+        
+        // Pagination
+        Integer total = filtered.size();
+        Integer startIdx = (pageNumber - 1) * pageSize;
+        Integer endIdx = Math.min(startIdx + pageSize, total);
+        
+        List<Map<String, Object>> paged = new List<Map<String, Object>>();
+        if (startIdx < total) {
+            for (Integer i = startIdx; i < endIdx; i++) {
+                paged.add(filtered[i]);
+            }
+        }
+        
+        Map<String, Object> result = new Map<String, Object>();
+        result.put('tasks', paged);
+        result.put('totalRecords', total);
+        return result;
+    }
+    
+    @AuraEnabled
+    public static Map<String, Integer> getTaskStats(String token) {
+        Map<String, Integer> stats = new Map<String, Integer>{'Assigned' => 0, 'In Progress' => 0, 'Completed' => 0};
+        List<Map<String, Object>> tasks = getAllTasks(token);
+        for(Map<String, Object> t : tasks) {
+            String s = (String) t.get('Status__c');
+            if(String.isNotBlank(s)) {
+                if(!stats.containsKey(s)) stats.put(s, 0);
+                stats.put(s, stats.get(s) + 1);
+            }
+        }
+        return stats;
+    }
+    
+    @AuraEnabled
+    public static List<Map<String, Object>> getTopInterns(String token) {
+        List<Map<String, Object>> tasks = getAllTasks(token);
+        Map<String, Integer> finishCounts = new Map<String, Integer>();
+        Map<String, String> internNames = getInternNameMap(); // Helper
+        
+        for(Map<String, Object> t : tasks) {
+            if((String)t.get('Status__c') == 'Completed') {
+                Map<String, Object> intern = (Map<String, Object>) t.get('Intern__r');
+                String iName = (String) intern.get('Name'); // Logic in getAllTasks puts Name here but getting ID to map back might be safer? 
+                // getAllTasks puts: r.put('Intern__r', {Name: ...});
+                // We don't have the Intern ID directly on the task row in the Map returned by getAllTasks? 
+                // distinct getAllTasks implementation:
+                // r.put('Intern__r', ir); -> ir has Name.
+                // But we used existing getInternNameMap() inside getAllTasks.
+                // Let's assume Unique Name for now or better, check raw rows?
+                // Actually getAllTasks reads 'iId' from row[1]. 
+                // But getAllTasks output doesn't expose ID directly? 
+                // Wait, examining getAllTasks: 
+                // r.put('Intern__r', ir); 
+                // We should expose InternId in getAllTasks or fetch raw here.
+                // Let's fetch raw tasks to get InternId.
+            }
+        }
+        
+        // Re-approach: Count raw from sheet to use IDs
+        List<List<Object>> rows = GoogleSheetsService.getSheetData('Tasks', true);
+        for(Integer i=1; i<rows.size(); i++) {
+            if(rows[i].size() > 4 && (String)rows[i][4] == 'Completed') {
+                String iId = (String)rows[i][1];
+                if(!finishCounts.containsKey(iId)) finishCounts.put(iId, 0);
+                finishCounts.put(iId, finishCounts.get(iId) + 1);
+            }
+        }
+        
+        List<Map<String, Object>> result = new List<Map<String, Object>>();
+        for(String iId : finishCounts.keySet()) {
+            result.add(new Map<String, Object>{
+                'Id' => iId,
+                'Name' => internNames.containsKey(iId) ? internNames.get(iId) : 'Unknown',
+                'completedTasks' => finishCounts.get(iId)
+            });
+        }
+        
+        // Simple Bubble Sort DESC
+        for(Integer i=0; i<result.size(); i++) {
+            for(Integer j=1; j<result.size()-i; j++) {
+                Integer c1 = (Integer) result[j-1].get('completedTasks');
+                Integer c2 = (Integer) result[j].get('completedTasks');
+                if(c1 < c2) {
+                    Map<String, Object> temp = result[j-1];
+                    result[j-1] = result[j];
+                    result[j] = temp;
+                }
+            }
+        }
+        
+        // Top 5
+        List<Map<String, Object>> top = new List<Map<String, Object>>();
+        for(Integer k=0; k<Math.min(5, result.size()); k++) top.add(result[k]);
+        return top;
+    }
+    
+    @AuraEnabled
+    public static List<Map<String, Object>> getUpcomingDeadlines(String token) {
+        List<Map<String, Object>> tasks = getAllTasks(token);
+        List<Map<String, Object>> pending = new List<Map<String, Object>>();
+        for(Map<String, Object> t : tasks) {
+            if((String)t.get('Status__c') != 'Completed' && t.get('Due_Date__c') != null) {
+                pending.add(t);
+            }
+        }
+        
+        // Sort by Date ASC
+        for(Integer i=0; i<pending.size(); i++) {
+            for(Integer j=1; j<pending.size()-i; j++) {
+                Date d1 = (Date) pending[j-1].get('Due_Date__c');
+                Date d2 = (Date) pending[j].get('Due_Date__c');
+                if(d1 > d2) {
+                    Map<String, Object> temp = pending[j-1];
+                    pending[j-1] = pending[j];
+                    pending[j] = temp;
+                }
+            }
+        }
+        
+        return pending;
+    }
+    
+    @AuraEnabled
+    public static Map<String, Integer> getLeaveStats(String token) {
+        Map<String, Integer> stats = new Map<String, Integer>{'Approved'=>0, 'Pending'=>0, 'Rejected'=>0};
+        List<Map<String, Object>> leaves = getAllLeaveRequests(token);
+        for(Map<String, Object> l : leaves) {
+            String s = (String) l.get('Status__c');
+            if(String.isNotBlank(s)) {
+                if(!stats.containsKey(s)) stats.put(s, 0);
+                stats.put(s, stats.get(s) + 1);
+            }
+        }
+        return stats;
+    }
+    
+    @AuraEnabled
+    public static Map<String, Integer> getTaskPriorityStats(String token) {
+        Map<String, Integer> stats = new Map<String, Integer>{'High'=>0, 'Medium'=>0, 'Low'=>0};
+        List<Map<String, Object>> tasks = getAllTasks(token);
+        for(Map<String, Object> t : tasks) {
+            String p = (String) t.get('Priority__c');
+            if(String.isNotBlank(p)) {
+                if(!stats.containsKey(p)) stats.put(p, 0);
+                stats.put(p, stats.get(p) + 1);
+            }
+        }
+        return stats;
+    }
+
+    @AuraEnabled(cacheable=true)
+    public static List<Map<String, Object>> getAllSyllabus() { return InternWorkController.getSyllabus(); }
+    
+    @AuraEnabled
+    public static void saveSyllabus(Map<String, Object> syllabus) {
+         try {
+             String cProps = (String) syllabus.get('Course_Name__c');
+             String mProps = (String) syllabus.get('Module_Name__c');
+             String tProps = (String) syllabus.get('Topic_Name__c');
+             
+             List<Object> newRow = new List<Object>{ generateUUID(), cProps, mProps, tProps == null ? '' : tProps };
+             GoogleSheetsService.appendRow('Syllabus', newRow);
+         } catch(Exception e) { throw new AuraHandledException(e.getMessage()); }
+    }
+    
+    @AuraEnabled
+    public static void deleteSyllabus(String syllabusId) { deleteRowById('Syllabus', syllabusId); }
+    
+    @AuraEnabled(cacheable=true)
+    public static List<Map<String, Object>> getAllSessionLinks() { return InternWorkController.getClassSessionLinks(); }
+    
+    @AuraEnabled
+    public static void saveSessionLink(Map<String, Object> sessionLink) {
+         try {
+             String id = (String) sessionLink.get('Id');
+             String agenda = (String) sessionLink.get('Agenda__c');
+             String dateStr = String.valueOf(sessionLink.get('Date__c'));
+             String startT = (String) sessionLink.get('Session_Start__c');
+             String endT = (String) sessionLink.get('Session_End__c');
+             String url = (String) sessionLink.get('Session_URL__c');
+             String speaker = (String) sessionLink.get('Speaker__c');
+             
+             if (String.isNotBlank(id)) {
+                 List<List<Object>> rows = GoogleSheetsService.getSheetData('ClassSessionLinks', true);
+                 for (Integer i = 1; i < rows.size(); i++) {
+                     if ((String)rows[i][0] == id) {
+                         List<Object> row = new List<Object>{ id, agenda, agenda, dateStr, startT, endT, url, speaker };
+                         GoogleSheetsService.updateRow('ClassSessionLinks', i + 1, row);
+                         return;
+                     }
+                 }
+             } else {
+                 List<Object> newRow = new List<Object>{ generateUUID(), agenda, agenda, dateStr, startT, endT, url, speaker };
+                 GoogleSheetsService.appendRow('ClassSessionLinks', newRow);
+             }
+         } catch(Exception e) { throw new AuraHandledException(e.getMessage()); }
+    }
+    
+    @AuraEnabled
+    public static void deleteSessionLink(String linkId) { deleteRowById('ClassSessionLinks', linkId); }
+    
+     public class AdminMetrics {
         @AuraEnabled public Integer totalInterns;
         @AuraEnabled public Integer pendingLeaves;
         @AuraEnabled public Integer totalTasks;
     }
-
-    // --- Helper for Token Validation & Role Fetching ---
-    private static Admin_User__c getAuthenticatedAdmin(String token) {
-        if (String.isBlank(token)) throw new AuraHandledException('Session Expired. Please login again.');
-        List<Admin_User__c> admins = [SELECT Id, Role__c FROM Admin_User__c WHERE Session_Token__c = :token LIMIT 1];
-        if (admins.isEmpty()) throw new AuraHandledException('Invalid Session');
-        return admins[0];
-    }
-
-    // --- Intern Management ---
-    @AuraEnabled(cacheable=true)
-    public static List<Intern__c> getAllInterns(String token) {
-        Admin_User__c admin = getAuthenticatedAdmin(token);
-        if (admin.Role__c == 'Super Admin') {
-            return [SELECT Id, Name, Email__c, Phone__c, College_Name__c, Roll_Number__c, Address__c, Start_Date__c, End_Date__c, Team_Lead__r.Name 
-                    FROM Intern__c 
-                    ORDER BY Name ASC];
-        } else {
-            return [SELECT Id, Name, Email__c, Phone__c, College_Name__c, Roll_Number__c, Address__c, Start_Date__c, End_Date__c, Team_Lead__r.Name 
-                    FROM Intern__c 
-                    WHERE Team_Lead__c = :admin.Id 
-                    ORDER BY Name ASC];
-        }
-    }
-
+    
     @AuraEnabled(cacheable=true)
     public static AdminMetrics getAdminMetrics(String token) {
-        Admin_User__c admin = getAuthenticatedAdmin(token);
-        AdminMetrics m = new AdminMetrics();
-        Id adminId = admin.Id;
-
-        if (admin.Role__c == 'Super Admin') {
-            m.totalInterns = [SELECT count() FROM Intern__c];
-            m.pendingLeaves = [SELECT count() FROM Leave_Request__c WHERE Status__c = 'Pending'];
-            m.totalTasks = [SELECT count() FROM Intern_Task__c];
-        } else {
-            List<Intern__c> myInterns = [SELECT Id FROM Intern__c WHERE Team_Lead__c = :adminId];
-            Set<Id> internIds = new Set<Id>();
-            for(Intern__c i : myInterns) internIds.add(i.Id);
-
-            m.totalInterns = myInterns.size();
-            m.pendingLeaves = [SELECT count() FROM Leave_Request__c WHERE Status__c = 'Pending' AND Intern__c IN :internIds];
-            m.totalTasks = [SELECT count() FROM Intern_Task__c WHERE Intern__c IN :internIds];
-        }
-        return m;
-    }
-
-    @AuraEnabled
-    public static void saveIntern(Intern__c intern) {
-        try { upsert intern; } catch (Exception e) { throw new AuraHandledException(e.getMessage()); }
-    }
-
-    @AuraEnabled
-    public static void deleteIntern(Id internId) {
-        try { delete [SELECT Id FROM Intern__c WHERE Id = :internId]; } catch (Exception e) { throw new AuraHandledException(e.getMessage()); }
-    }
-
-    // --- Leave Management ---
-    @AuraEnabled(cacheable=true)
-    public static List<Leave_Request__c> getAllLeaveRequests(String token) {
-        Admin_User__c admin = getAuthenticatedAdmin(token);
-        if (admin.Role__c == 'Super Admin') {
-            return [SELECT Id, Intern__r.Name, Start_Date__c, End_Date__c, Reason__c, Status__c 
-                    FROM Leave_Request__c 
-                    ORDER BY CreatedDate DESC];
-        } else {
-            return [SELECT Id, Intern__r.Name, Start_Date__c, End_Date__c, Reason__c, Status__c 
-                    FROM Leave_Request__c 
-                    WHERE Intern__r.Team_Lead__c = :admin.Id 
-                    ORDER BY CreatedDate DESC];
-        }
-    }
-
-    @AuraEnabled
-    public static void updateLeaveStatus(Id leaveId, String status) {
-        try { update new Leave_Request__c(Id = leaveId, Status__c = status); } catch (Exception e) { throw new AuraHandledException(e.getMessage()); }
-    }
-
-    // --- Mentorship Management ---
-    @AuraEnabled(cacheable=true)
-    public static List<Mentorship_Request__c> getAllMentorshipRequests(String token) {
-        Admin_User__c admin = getAuthenticatedAdmin(token);
-        if (admin.Role__c == 'Super Admin') {
-            return [SELECT Id, Intern__r.Name, Request_Type__c, Description__c, Status__c, Mentor_Response__c, CreatedDate 
-                    FROM Mentorship_Request__c 
-                    ORDER BY CreatedDate DESC];
-        } else {
-            return [SELECT Id, Intern__r.Name, Request_Type__c, Description__c, Status__c, Mentor_Response__c, CreatedDate 
-                    FROM Mentorship_Request__c 
-                    WHERE Intern__r.Team_Lead__c = :admin.Id 
-                    ORDER BY CreatedDate DESC];
-        }
-    }
-
-    @AuraEnabled
-    public static void replyToMentorship(Id requestId, String response, String status) {
-        try { update new Mentorship_Request__c(Id = requestId, Mentor_Response__c = response, Status__c = status); } catch (Exception e) { throw new AuraHandledException(e.getMessage()); }
-    }
-
-    // --- Daily Logs ---
-    @AuraEnabled(cacheable=true)
-    public static List<Daily_Log__c> getAllDailyLogs(String token) {
-        Admin_User__c admin = getAuthenticatedAdmin(token);
-        if (admin.Role__c == 'Super Admin') {
-            return [SELECT Id, Intern__r.Name, Log_Date__c, Hours_Spent__c, Work_Description__c, Course__c, Module__c, Topic__c 
-                    FROM Daily_Log__c 
-                    ORDER BY Log_Date__c DESC LIMIT 500];
-        } else {
-            return [SELECT Id, Intern__r.Name, Log_Date__c, Hours_Spent__c, Work_Description__c, Course__c, Module__c, Topic__c 
-                    FROM Daily_Log__c 
-                    WHERE Intern__r.Team_Lead__c = :admin.Id 
-                    ORDER BY Log_Date__c DESC LIMIT 500];
-        }
-    }
-
-    // --- Announcements ---
-    @AuraEnabled(cacheable=true)
-    public static List<Announcement__c> getAllAnnouncements() {
-        return [SELECT Id, Message__c, Type__c, CreatedDate FROM Announcement__c ORDER BY CreatedDate DESC];
-    }
-
-    @AuraEnabled
-    public static void saveAnnouncement(Announcement__c announcement) {
-        try { upsert announcement; } catch (Exception e) { throw new AuraHandledException(e.getMessage()); }
-    }
-
-    @AuraEnabled
-    public static void deleteAnnouncement(Id announcementId) {
-        try { delete [SELECT Id FROM Announcement__c WHERE Id = :announcementId]; } catch (Exception e) { throw new AuraHandledException(e.getMessage()); }
-    }
-
-     // --- Resources ---
-    @AuraEnabled(cacheable=true)
-    public static List<Resource__c> getAllResources() {
-        return [SELECT Id, Title__c, Link__c, Type__c, Description__c FROM Resource__c ORDER BY CreatedDate DESC];
-    }
-
-    @AuraEnabled
-    public static void saveResource(Resource__c resource) {
-        try { upsert resource; } catch (Exception e) { throw new AuraHandledException(e.getMessage()); }
-    }
-
-    @AuraEnabled
-    public static void deleteResource(Id resourceId) {
-        try { delete [SELECT Id FROM Resource__c WHERE Id = :resourceId]; } catch (Exception e) { throw new AuraHandledException(e.getMessage()); }
-    }
-
-    // --- Task Management ---
-    @AuraEnabled(cacheable=true)
-    public static List<Intern_Task__c> getAllTasks(String token) {
-        Admin_User__c admin = getAuthenticatedAdmin(token);
-        if (admin.Role__c == 'Super Admin') {
-            return [SELECT Id, Name, Intern__r.Name, Status__c, Due_Date__c, Priority__c, Description__c 
-                    FROM Intern_Task__c 
-                    ORDER BY Due_Date__c ASC];
-        } else {
-            List<Intern__c> myInterns = [SELECT Id FROM Intern__c WHERE Team_Lead__c = :admin.Id];
-            Set<Id> internIds = new Set<Id>();
-            for(Intern__c i : myInterns) internIds.add(i.Id);
-            return [SELECT Id, Name, Intern__r.Name, Status__c, Due_Date__c, Priority__c, Description__c 
-                    FROM Intern_Task__c 
-                    WHERE Intern__c IN :internIds 
-                    ORDER BY Due_Date__c ASC];
-        }
-    }
-
-    @AuraEnabled
-    public static void saveTask(Intern_Task__c task) {
-        try { upsert task; } catch (Exception e) { throw new AuraHandledException(e.getMessage()); }
-    }
-
-    @AuraEnabled
-    public static void deleteTask(Id taskId) {
-        try { delete [SELECT Id FROM Intern_Task__c WHERE Id = :taskId]; } catch (Exception e) { throw new AuraHandledException(e.getMessage()); }
-    }
-
-    @AuraEnabled
-    public static void assignTaskToInterns(Intern_Task__c taskTemplate, List<Id> targetInternIds, Boolean assignToAll, String token) {
-        Admin_User__c admin = getAuthenticatedAdmin(token);
-        List<Intern_Task__c> tasksToInsert = new List<Intern_Task__c>();
-        List<Intern__c> targetInterns = new List<Intern__c>();
-
-        if (assignToAll) {
-            if (admin.Role__c == 'Super Admin') {
-                targetInterns = [SELECT Id FROM Intern__c];
-            } else {
-                targetInterns = [SELECT Id FROM Intern__c WHERE Team_Lead__c = :admin.Id];
-            }
-        } else {
-             if (targetInternIds != null && !targetInternIds.isEmpty()) {
-                targetInterns = [SELECT Id FROM Intern__c WHERE Id IN :targetInternIds];
-             }
-        }
-
-        for (Intern__c intern : targetInterns) {
-            Intern_Task__c newTask = taskTemplate.clone(false, true, false, false);
-            newTask.Intern__c = intern.Id;
-            newTask.Status__c = 'Assigned'; 
-            tasksToInsert.add(newTask);
-        }
-
-        if (!tasksToInsert.isEmpty()) {
-            try {
-                insert tasksToInsert;
-            } catch (Exception e) {
-                throw new AuraHandledException(e.getMessage());
-            }
-        }
-    }
-
-    // --- Social & Visual Features ---
-    public class ActivityWrapper {
-        @AuraEnabled public String id;
-        @AuraEnabled public String type; // 'Intern', 'Leave', 'Task'
-        @AuraEnabled public String message;
-        @AuraEnabled public Datetime activityDate;
-        @AuraEnabled public String relativeTime;
-    }
-
-    @AuraEnabled(cacheable=true)
-    public static List<ActivityWrapper> getRecentActivities(String token) {
-        Admin_User__c admin = getAuthenticatedAdmin(token);
-        List<ActivityWrapper> activities = new List<ActivityWrapper>();
-
-        // 1. New Interns
-        List<Intern__c> interns = [SELECT Id, Name, CreatedDate FROM Intern__c ORDER BY CreatedDate DESC LIMIT 5];
-        for (Intern__c i : interns) {
-            ActivityWrapper w = new ActivityWrapper();
-            w.id = i.Id; w.type = 'Intern'; w.message = 'New Intern: ' + i.Name; w.activityDate = i.CreatedDate;
-            activities.add(w);
-        }
-
-        // 2. New Leaves
-        List<Leave_Request__c> leaves = [SELECT Id, Intern__r.Name, CreatedDate FROM Leave_Request__c ORDER BY CreatedDate DESC LIMIT 5];
-        for (Leave_Request__c l : leaves) {
-            ActivityWrapper w = new ActivityWrapper();
-            w.id = l.Id; w.type = 'Leave'; w.message = 'Leave Request from ' + l.Intern__r.Name; w.activityDate = l.CreatedDate;
-            activities.add(w);
-        }
-
-        // 3. Task Status Updates (Based on LastModified)
-        List<Intern_Task__c> tasks = [SELECT Id, Name, LastModifiedDate FROM Intern_Task__c ORDER BY LastModifiedDate DESC LIMIT 5];
-        for (Intern_Task__c t : tasks) {
-            ActivityWrapper w = new ActivityWrapper();
-            w.id = t.Id; w.type = 'Task'; w.message = 'Task Updated: ' + t.Name; w.activityDate = t.LastModifiedDate;
-            activities.add(w);
-        }
-
-        // 4. Mentorship Requests
-        List<Mentorship_Request__c> mentors = [SELECT Id, Intern__r.Name, CreatedDate FROM Mentorship_Request__c ORDER BY CreatedDate DESC LIMIT 5];
-        for (Mentorship_Request__c m : mentors) {
-            ActivityWrapper w = new ActivityWrapper();
-            w.id = m.Id; w.type = 'Mentorship'; w.message = 'Mentorship Request: ' + m.Intern__r.Name; w.activityDate = m.CreatedDate;
-            activities.add(w);
-        }
-
-        // 5. Work Logs
-        List<Daily_Log__c> logs = [SELECT Id, Intern__r.Name, Hours_Spent__c, CreatedDate FROM Daily_Log__c ORDER BY CreatedDate DESC LIMIT 5];
-        for (Daily_Log__c l : logs) {
-            ActivityWrapper w = new ActivityWrapper();
-            w.id = l.Id; w.type = 'Log'; w.message = l.Intern__r.Name + ' logged ' + l.Hours_Spent__c + 'h'; w.activityDate = l.CreatedDate;
-            activities.add(w);
-        }
-
-        // Sort by Date DESC
-        for (Integer i = 0; i < activities.size(); i++) {
-            for (Integer j = i + 1; j < activities.size(); j++) {
-                if (activities[i].activityDate < activities[j].activityDate) {
-                    ActivityWrapper temp = activities[i];
-                    activities[i] = activities[j];
-                    activities[j] = temp;
-                }
-            }
-        }
-
-        // Return top 10
-        List<ActivityWrapper> result = new List<ActivityWrapper>();
-        for (Integer i = 0; i < Math.min(10, activities.size()); i++) result.add(activities[i]);
-        return result;
-    }
-
-    // --- Filtered Task Management ---
-    public class TaskDataTableWrapper {
-        @AuraEnabled public List<Intern_Task__c> tasks;
-        @AuraEnabled public Integer totalRecords;
-    }
-
-    @AuraEnabled(cacheable=true)
-    public static TaskDataTableWrapper getFilteredTasks(String internName, String taskName, Date dueDate, String status, Integer pageSize, Integer pageNumber, String token) {
-        Admin_User__c admin = getAuthenticatedAdmin(token);
-        Integer offset = (pageNumber - 1) * pageSize;
-        
-        String query = 'SELECT Id, Name, Intern__r.Name, Status__c, Due_Date__c, Priority__c, Description__c FROM Intern_Task__c WHERE ';
-        String countQuery = 'SELECT count() FROM Intern_Task__c WHERE ';
-        
-        List<String> filters = new List<String>();
-        
-        // Role cleanup
-        if (admin.Role__c != 'Super Admin') {
-            filters.add('Intern__r.Team_Lead__c = \'' + admin.Id + '\'');
-        }
-
-        if (String.isNotBlank(internName)) {
-            filters.add('Intern__r.Name LIKE \'%' + String.escapeSingleQuotes(internName) + '%\'');
-        }
-        if (String.isNotBlank(taskName)) {
-            filters.add('Name LIKE \'%' + String.escapeSingleQuotes(taskName) + '%\'');
-        }
-        if (dueDate != null) {
-            DateTime dt = DateTime.newInstance(dueDate.year(), dueDate.month(), dueDate.day());
-           filters.add('Due_Date__c = ' + dt.format('yyyy-MM-dd'));
-        }
-        if (String.isNotBlank(status) && status != 'All') {
-            filters.add('Status__c = \'' + String.escapeSingleQuotes(status) + '\'');
-        }
-
-        if (filters.isEmpty()) {
-            query += 'Id != null'; // Fallback
-            countQuery += 'Id != null';
-        } else {
-            query += String.join(filters, ' AND ');
-            countQuery += String.join(filters, ' AND ');
-        }
-
-        query += ' ORDER BY Due_Date__c ASC LIMIT :pageSize OFFSET :offset';
-
-        TaskDataTableWrapper wrapper = new TaskDataTableWrapper();
-        wrapper.totalRecords = Database.countQuery(countQuery);
-        wrapper.tasks = Database.query(query);
-        
-        return wrapper;
-    }
-
-    @AuraEnabled(cacheable=true)
-    public static Map<String, Integer> getTaskStats(String token) {
-        Admin_User__c admin = getAuthenticatedAdmin(token);
-        Map<String, Integer> stats = new Map<String, Integer>();
-        
-        List<AggregateResult> ar = [SELECT Status__c, count(Id) cnt FROM Intern_Task__c GROUP BY Status__c];
-        for (AggregateResult r : ar) {
-            stats.put((String)r.get('Status__c'), (Integer)r.get('cnt'));
-        }
-        return stats;
-    }
-    public class InternPerformanceWrapper {
-        @AuraEnabled public String id;
-        @AuraEnabled public String name;
-        @AuraEnabled public Integer completedTasks;
-    }
-
-    @AuraEnabled(cacheable=true)
-    public static List<InternPerformanceWrapper> getTopInterns(String token) {
-        Admin_User__c admin = getAuthenticatedAdmin(token);
-        List<InternPerformanceWrapper> result = new List<InternPerformanceWrapper>();
-        
-        List<AggregateResult> groupedResults;
-        // Relaxed criteria: Count all tasks (Completed + In Progress) to show activity
-        if (admin.Role__c == 'Super Admin') {
-            groupedResults = [SELECT Intern__c, Intern__r.Name Name, COUNT(Id) taskCount 
-                              FROM Intern_Task__c 
-                              WHERE Status__c != 'Assigned' 
-                              GROUP BY Intern__c, Intern__r.Name 
-                              ORDER BY COUNT(Id) DESC 
-                              LIMIT 5];
-        } else {
-             groupedResults = [SELECT Intern__c, Intern__r.Name Name, COUNT(Id) taskCount 
-                              FROM Intern_Task__c 
-                              WHERE Status__c != 'Assigned' AND Intern__r.Team_Lead__c = :admin.Id
-                              GROUP BY Intern__c, Intern__r.Name 
-                              ORDER BY COUNT(Id) DESC 
-                              LIMIT 5];
-        }
-
-        for (AggregateResult ar : groupedResults) {
-            InternPerformanceWrapper w = new InternPerformanceWrapper();
-            w.id = (String)ar.get('Intern__c');
-            w.name = (String)ar.get('Name');
-            w.completedTasks = (Integer)ar.get('taskCount');
-            result.add(w);
-        }
-        return result;
-    }
-
-    @AuraEnabled(cacheable=true)
-    public static List<Intern_Task__c> getUpcomingDeadlines(String token) {
-        Admin_User__c admin = getAuthenticatedAdmin(token);
-        Date today = Date.today();
-        Date futureScope = today.addDays(30);
-        
-        // Include Overdue tasks! (Removed Due_Date__c >= :today)
-        // Show ALL upcoming deadlines regardless of date or team lead (per user request for visibility)
-        if (admin.Role__c == 'Super Admin') {
-            return [SELECT Id, Name, Intern__r.Name, Due_Date__c, Priority__c 
-                    FROM Intern_Task__c 
-                    WHERE Status__c != 'Completed'
-                    ORDER BY Due_Date__c ASC 
-                    LIMIT 50];
-        } else {
-             return [SELECT Id, Name, Intern__r.Name, Due_Date__c, Priority__c 
-                    FROM Intern_Task__c 
-                    WHERE Status__c != 'Completed'
-                    // Relaxed Team Lead Filter to match getTaskStats behavior
-                    // AND Intern__c IN (SELECT Id FROM Intern__c WHERE Team_Lead__c = :admin.Id)
-                    ORDER BY Due_Date__c ASC 
-                    LIMIT 50];
-        }
-    }
-
-    @AuraEnabled(cacheable=true)
-    public static Map<String, Integer> getLeaveStats(String token) {
-        Admin_User__c admin = getAuthenticatedAdmin(token);
-        Map<String, Integer> stats = new Map<String, Integer>();
-        String query = 'SELECT Status__c, count(Id) cnt FROM Leave_Request__c ';
-        
-        if (admin.Role__c != 'Super Admin') {
-            query += 'WHERE Intern__r.Team_Lead__c = \'' + admin.Id + '\' ';
-        }
-        query += 'GROUP BY Status__c';
-
-        List<AggregateResult> ar = Database.query(query);
-        for (AggregateResult r : ar) {
-            stats.put((String)r.get('Status__c'), (Integer)r.get('cnt'));
-        }
-        return stats;
-    }
-
-    @AuraEnabled(cacheable=true)
-    public static Map<String, Integer> getTaskPriorityStats(String token) {
-        Admin_User__c admin = getAuthenticatedAdmin(token);
-        Map<String, Integer> stats = new Map<String, Integer>();
-        // Fetch Priority Stats for Chart
-        String query = 'SELECT Priority__c, count(Id) cnt FROM Intern_Task__c ';
-        
-        if (admin.Role__c != 'Super Admin') {
-            // Relaxed filter to show global stats if needed, or strictly own team.
-            // Matching getTaskStats behavior which shows ALL.
-            // query += 'WHERE Intern__r.Team_Lead__c = \'' + admin.Id + '\' ';
-        }
-        query += 'GROUP BY Priority__c';
-
-        List<AggregateResult> ar = Database.query(query);
-        for (AggregateResult r : ar) {
-            stats.put((String)r.get('Priority__c'), (Integer)r.get('cnt'));
-        }
-        return stats;
-    }
-
-    // --- Course Syllabus Management ---
-    @AuraEnabled(cacheable=true)
-    public static List<Course_Syllabus__c> getAllSyllabus() {
-        return [SELECT Id, Course_Name__c, Module_Name__c 
-                FROM Course_Syllabus__c 
-                ORDER BY Course_Name__c, Module_Name__c];
-    }
-
-    @AuraEnabled
-    public static void saveSyllabus(Course_Syllabus__c syllabus) {
-        try { 
-            // Handle required Topic_Name__c constraint if field exists
-            // We set a default value to satisfy database requirements even though the field is hidden in UI
-            syllabus.Topic_Name__c = 'General'; 
-            upsert syllabus; 
-        } catch (Exception e) { throw new AuraHandledException(e.getMessage()); }
-    }
-
-    @AuraEnabled
-    public static void deleteSyllabus(Id syllabusId) {
-        try { delete [SELECT Id FROM Course_Syllabus__c WHERE Id = :syllabusId]; } catch (Exception e) { throw new AuraHandledException(e.getMessage()); }
-    }
-
-    // --- Class Session Links Management ---
-    @AuraEnabled(cacheable=true)
-    public static List<Class_Session_Links__c> getAllSessionLinks() {
-        return [SELECT Id, Name, Agenda__c, Date__c, Session_Start__c,
-                       Session_End__c, Session_URL__c, Speaker__c,
-                       CreatedDate, LastModifiedDate
-                FROM Class_Session_Links__c
-                ORDER BY Date__c DESC, Session_Start__c ASC];
-    }
-
-    @AuraEnabled
-    public static void saveSessionLink(Class_Session_Links__c sessionLink) {
-        try {
-            upsert sessionLink;
-        } catch (Exception e) {
-            throw new AuraHandledException(e.getMessage());
-        }
-    }
-
-    @AuraEnabled
-    public static void deleteSessionLink(Id sessionLinkId) {
-        try {
-            delete [SELECT Id FROM Class_Session_Links__c WHERE Id = :sessionLinkId];
-        } catch (Exception e) {
-            throw new AuraHandledException(e.getMessage());
-        }
+         AdminMetrics m = new AdminMetrics();
+         m.totalInterns = GoogleSheetsService.getSheetData('Interns', true).size() - 1;
+         m.pendingLeaves = 0;
+         m.totalTasks = GoogleSheetsService.getSheetData('Tasks', true).size() - 1;
+         return m;
     }
 }

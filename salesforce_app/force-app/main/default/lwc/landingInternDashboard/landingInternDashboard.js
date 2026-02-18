@@ -26,6 +26,8 @@ import getSyllabus from '@salesforce/apex/InternWorkController.getSyllabus';
 import getClassSessionLinks from '@salesforce/apex/InternWorkController.getClassSessionLinks';
 import LEARNERS_BYTE_LOGO from '@salesforce/resourceUrl/LearnersByteExpertpedia';
 
+import refreshSystemCache from '@salesforce/apex/InternWorkController.refreshSystemCache';
+
 export default class LandingInternDashboard extends LightningElement {
     learnersByteLogo = LEARNERS_BYTE_LOGO;
     _token;
@@ -188,6 +190,10 @@ export default class LandingInternDashboard extends LightningElement {
         this.refreshSessionLinks();
         // Update date/time display
         this.updateDateTime();
+
+        // Background Cache Refresh (Fix for 429 Errors)
+        refreshSystemCache().catch(e => console.log('Cache Refresh Background:', e));
+
         this.timeInterval = setInterval(() => {
             this.updateDateTime();
         }, 1000);
@@ -459,6 +465,19 @@ export default class LandingInternDashboard extends LightningElement {
         return `${hours}:${minutesStr} ${ampm}`;
     }
 
+    formatDateTime(dateObj) {
+        if (!dateObj) return '';
+        // Format: Feb 16, 2026, 3:17 PM
+        return dateObj.toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: 'numeric',
+            hour12: true
+        });
+    }
+
     handleMentorshipInput(event) {
         const field = event.target.dataset.field;
         this.mentorshipForm = { ...this.mentorshipForm, [field]: event.target.value };
@@ -606,7 +625,11 @@ export default class LandingInternDashboard extends LightningElement {
             alert('Diary Entry Submitted Successfully!');
         } catch (e) {
             console.error(e);
-            alert('Error submitting log: ' + (e.body ? e.body.message : e.message));
+            let msg = e.body ? e.body.message : e.message;
+            if (msg.includes('429') || msg.includes('Quota') || msg.includes('Limit') || msg.includes('RESOURCE_EXHAUSTED')) {
+                msg = 'The server is currently busy. Please wait a moment and try again.';
+            }
+            alert('Error submitting log: ' + msg);
         } finally {
             this.isLoading = false;
         }
@@ -681,8 +704,12 @@ export default class LandingInternDashboard extends LightningElement {
 
                 } catch (e) {
                     console.error('Error uploading image', e);
+                    let msg = e.body ? e.body.message : e.message;
+                    if (msg.includes('429') || msg.includes('Quota') || msg.includes('Limit') || msg.includes('RESOURCE_EXHAUSTED')) {
+                        msg = 'The server is currently busy. Please wait a moment and try again.';
+                    }
                     LightningAlert.open({
-                        message: 'Error uploading image: ' + (e.body ? e.body.message : e.message),
+                        message: msg,
                         theme: 'error',
                         label: 'Upload Error',
                     });
@@ -722,7 +749,11 @@ export default class LandingInternDashboard extends LightningElement {
             alert('Profile Updated Successfully!');
         } catch (e) {
             console.error(e);
-            alert('Error updating profile: ' + (e.body ? e.body.message : e.message));
+            let msg = e.body ? e.body.message : e.message;
+            if (msg.includes('429') || msg.includes('Quota') || msg.includes('Limit') || msg.includes('RESOURCE_EXHAUSTED')) {
+                msg = 'The server is currently busy. Please wait a moment and try again.';
+            }
+            alert('Error updating profile: ' + msg);
         } finally {
             this.isLoading = false;
         }
@@ -805,7 +836,11 @@ export default class LandingInternDashboard extends LightningElement {
             alert('Leave request submitted!');
         } catch (e) {
             console.error(e);
-            alert(e.body ? e.body.message : e.message);
+            let msg = e.body ? e.body.message : e.message;
+            if (msg.includes('429') || msg.includes('Quota') || msg.includes('Limit') || msg.includes('RESOURCE_EXHAUSTED')) {
+                msg = 'The server is currently busy. Please wait a moment and try again.';
+            }
+            alert(msg);
         } finally {
             this.isLoading = false;
         }
@@ -859,8 +894,9 @@ export default class LandingInternDashboard extends LightningElement {
     async refreshData() {
         this.isLoading = true;
         try {
+            const todayStr = this.getLocalDateStr();
             // 1. Current Status (Check In/Out)
-            const status = await getCurrentStatus({ token: this.token });
+            const status = await getCurrentStatus({ token: this.token, todayStr: todayStr });
 
             // Handle both legacy boolean (if mixed deploy) and new Map
             if (status && typeof status === 'object') {
@@ -877,10 +913,20 @@ export default class LandingInternDashboard extends LightningElement {
 
             // NORMALIZE STATUS (Handle Field Name Case Sensitivity)
             if (this.history) {
-                this.history = this.history.map(row => ({
-                    ...row,
-                    Status__c: row.Status__c || row.status__c || row.Status || ''
-                }));
+                this.history = this.history.map(row => {
+                    // Parse ISO strings from Apex
+                    const loginDate = row.Login_Time__c ? new Date(row.Login_Time__c) : null;
+                    const logoutDate = row.Logout_Time__c ? new Date(row.Logout_Time__c) : null;
+                    const dateObj = row.Date__c ? new Date(row.Date__c) : null;
+
+                    return {
+                        ...row,
+                        Status__c: row.Status__c || row.status__c || row.Status || '',
+                        Login_Time__c: loginDate ? this.formatDateTime(loginDate) : '-',
+                        Logout_Time__c: logoutDate ? this.formatDateTime(logoutDate) : '-',
+                        Date__c: dateObj ? dateObj.toLocaleDateString() : '-'
+                    };
+                });
             }
 
             this.tasks = await getTasks({ token: this.token });
@@ -942,7 +988,8 @@ export default class LandingInternDashboard extends LightningElement {
     async handleClockIn() {
         this.isLoading = true;
         try {
-            await clockIn({ token: this.token });
+            const todayStr = this.getLocalDateStr();
+            await clockIn({ token: this.token, todayStr: todayStr });
             await this.refreshData(); // Refresh to update status and history
         } catch (e) {
             this.isLoading = false;
@@ -952,6 +999,8 @@ export default class LandingInternDashboard extends LightningElement {
             if (msg.includes('ALREADY_LOGGED_TODAY') || msg.includes('Script-thrown')) {
                 // If we get specific code OR generic script error (likely duplicate in this context)
                 this.showAlert('Already Checked In', 'You have already recorded a session for today. Duplicates are not allowed.', 'warning');
+            } else if (msg.includes('429') || msg.includes('Quota') || msg.includes('Limit') || msg.includes('RESOURCE_EXHAUSTED')) {
+                this.showAlert('Server Busy', 'The server is currently busy. Please wait a moment and try again.', 'error');
             } else {
                 this.showAlert('Error', msg, 'error');
             }
@@ -1028,7 +1077,11 @@ export default class LandingInternDashboard extends LightningElement {
             await this.refreshData(); // Refresh to update status and history
         } catch (e) {
             console.error(e);
-            alert(e.body ? e.body.message : e.message);
+            let msg = e.body ? e.body.message : e.message;
+            if (msg.includes('429') || msg.includes('Quota') || msg.includes('Limit') || msg.includes('RESOURCE_EXHAUSTED')) {
+                msg = 'The server is currently busy. Please wait a moment and try again.';
+            }
+            alert(msg);
             this.isLoading = false;
         }
     }
@@ -1235,7 +1288,11 @@ export default class LandingInternDashboard extends LightningElement {
             // alert('Saved!'); 
         } catch (e) {
             console.error(e);
-            alert(e.body ? e.body.message : e.message);
+            let msg = e.body ? e.body.message : e.message;
+            if (msg.includes('429') || msg.includes('Quota') || msg.includes('Limit') || msg.includes('RESOURCE_EXHAUSTED')) {
+                msg = 'The server is currently busy. Please wait a moment and try again.';
+            }
+            alert(msg);
         } finally {
             this.isLoading = false;
         }
@@ -1250,7 +1307,20 @@ export default class LandingInternDashboard extends LightningElement {
             await this.refreshData();
         } catch (e) {
             console.error(e);
+            let msg = e.body ? e.body.message : e.message;
+            if (msg.includes('429') || msg.includes('Quota') || msg.includes('Limit') || msg.includes('RESOURCE_EXHAUSTED')) {
+                msg = 'The server is currently busy. Please wait a moment and try again.';
+                alert(msg);
+            }
         }
+    }
+
+    getLocalDateStr() {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
     }
 
     handleLogout() {

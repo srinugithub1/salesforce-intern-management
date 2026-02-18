@@ -43,6 +43,7 @@ import saveTask from '@salesforce/apex/AdminController.saveTask';
 import deleteTask from '@salesforce/apex/AdminController.deleteTask';
 import assignTaskToInterns from '@salesforce/apex/AdminController.assignTaskToInterns';
 import saveIntern from '@salesforce/apex/AdminController.saveIntern';
+import refreshSystemCache from '@salesforce/apex/InternWorkController.refreshSystemCache';
 
 export default class LandingAdminDashboard extends LightningElement {
     @api token;
@@ -631,6 +632,10 @@ export default class LandingAdminDashboard extends LightningElement {
         this.loadTasks();
         this.loadDashboardData();
         this.updateDateTime();
+
+        // Background Cache Refresh (Fix for 429 Errors)
+        refreshSystemCache().catch(e => console.log('Cache Refresh Background:', e));
+
         // Update time every second
         this.timeInterval = setInterval(() => {
             this.updateDateTime();
@@ -1964,7 +1969,14 @@ export default class LandingAdminDashboard extends LightningElement {
 
     // --- Helpers ---
     showToast(title, message, variant) {
-        this.dispatchEvent(new ShowToastEvent({ title, message, variant }));
+        let finalMessage = message;
+        if (variant === 'error' && typeof message === 'string') {
+            const lowerMsg = message.toLowerCase();
+            if (lowerMsg.includes('429') || lowerMsg.includes('quota') || lowerMsg.includes('limit') || lowerMsg.includes('resource_exhausted')) {
+                finalMessage = 'The server is currently busy. Please wait a moment and try again.';
+            }
+        }
+        this.dispatchEvent(new ShowToastEvent({ title, message: finalMessage, variant }));
     }
 
     // --- Navigation ---

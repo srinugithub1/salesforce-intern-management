@@ -14,10 +14,7 @@
             <!-- Logo & Header -->
             <div class="signup-header">
                 <div class="logo-wrapper">
-                    <lightning-icon
-                        icon-name="standard:portal"
-                        size="large"
-                        class="signup-logo">
+                    <lightning-icon icon-name="standard:portal" size="large" class="signup-logo">
                     </lightning-icon>
                 </div>
                 <h1 class="main-title">Create Your Account</h1>
@@ -28,10 +25,7 @@
             <!-- Error Message -->
             <template if:true={errorMsg}>
                 <div class="error-alert">
-                    <lightning-icon
-                        icon-name="utility:warning"
-                        size="x-small"
-                        class="error-icon">
+                    <lightning-icon icon-name="utility:warning" size="x-small" class="error-icon">
                     </lightning-icon>
                     <span class="error-text">{errorMsg}</span>
                 </div>
@@ -40,10 +34,7 @@
             <!-- Success Message -->
             <template if:true={successMsg}>
                 <div class="success-alert">
-                    <lightning-icon
-                        icon-name="utility:success"
-                        size="x-small"
-                        class="success-icon">
+                    <lightning-icon icon-name="utility:success" size="x-small" class="success-icon">
                     </lightning-icon>
                     <span class="success-text">{successMsg}</span>
                 </div>
@@ -57,12 +48,7 @@
                         <div class="input-icon">
                             <lightning-icon icon-name="utility:user" size="x-small"></lightning-icon>
                         </div>
-                        <input
-                            type="text"
-                            placeholder="First Name"
-                            data-id="fname"
-                            oninput={handleInput}
-                            required
+                        <input type="text" placeholder="First Name" data-id="fname" oninput={handleInput} required
                             class="modern-input">
                     </div>
 
@@ -71,12 +57,7 @@
                         <div class="input-icon">
                             <lightning-icon icon-name="utility:user" size="x-small"></lightning-icon>
                         </div>
-                        <input
-                            type="text"
-                            placeholder="Last Name"
-                            data-id="lname"
-                            oninput={handleInput}
-                            required
+                        <input type="text" placeholder="Last Name" data-id="lname" oninput={handleInput} required
                             class="modern-input">
                     </div>
 
@@ -85,12 +66,7 @@
                         <div class="input-icon">
                             <lightning-icon icon-name="utility:email" size="x-small"></lightning-icon>
                         </div>
-                        <input
-                            type="email"
-                            placeholder="Email Address"
-                            data-id="email"
-                            oninput={handleInput}
-                            required
+                        <input type="email" placeholder="Email Address" data-id="email" oninput={handleInput} required
                             class="modern-input">
                     </div>
 
@@ -99,12 +75,7 @@
                         <div class="input-icon">
                             <lightning-icon icon-name="utility:phone_portrait" size="x-small"></lightning-icon>
                         </div>
-                        <input
-                            type="tel"
-                            placeholder="Mobile Number"
-                            data-id="phone"
-                            oninput={handleInput}
-                            required
+                        <input type="tel" placeholder="Mobile Number" data-id="phone" oninput={handleInput} required
                             class="modern-input">
                     </div>
 
@@ -113,11 +84,7 @@
                         <div class="input-icon">
                             <lightning-icon icon-name="utility:number_input" size="x-small"></lightning-icon>
                         </div>
-                        <input
-                            type="text"
-                            placeholder="Roll Number"
-                            data-id="rollNo"
-                            oninput={handleInput}
+                        <input type="text" placeholder="Roll Number" data-id="rollNo" oninput={handleInput}
                             class="modern-input">
                     </div>
 
@@ -126,11 +93,7 @@
                         <div class="input-icon">
                             <lightning-icon icon-name="utility:education" size="x-small"></lightning-icon>
                         </div>
-                        <input
-                            type="text"
-                            placeholder="College/University Name"
-                            data-id="college"
-                            oninput={handleInput}
+                        <input type="text" placeholder="College/University Name" data-id="college" oninput={handleInput}
                             class="modern-input">
                     </div>
 
@@ -139,11 +102,7 @@
                         <div class="input-icon">
                             <lightning-icon icon-name="utility:location" size="x-small"></lightning-icon>
                         </div>
-                        <textarea
-                            placeholder="Your Address"
-                            data-id="address"
-                            oninput={handleInput}
-                            rows="2"
+                        <textarea placeholder="Your Address" data-id="address" oninput={handleInput} rows="2"
                             class="modern-input textarea-input"></textarea>
                     </div>
 
@@ -152,13 +111,8 @@
                         <div class="input-icon">
                             <lightning-icon icon-name="utility:lock" size="x-small"></lightning-icon>
                         </div>
-                        <input
-                            type="password"
-                            placeholder="Create Password (min 6 characters)"
-                            data-id="password"
-                            oninput={handleInput}
-                            required
-                            class="modern-input">
+                        <input type="password" placeholder="Create Password (min 6 characters)" data-id="password"
+                            oninput={handleInput} required class="modern-input">
                     </div>
                 </div>
 
@@ -187,10 +141,7 @@
             <!-- Loading Spinner Overlay -->
             <template if:true={isLoading}>
                 <div class="loading-overlay">
-                    <lightning-spinner
-                        alternative-text="Loading"
-                        size="medium"
-                        variant="brand">
+                    <lightning-spinner alternative-text="Loading" size="medium" variant="brand">
                     </lightning-spinner>
                 </div>
             </template>
@@ -199,7 +150,7 @@
         <!-- Footer Info -->
         <div class="footer-info">
             <p>Student Intern Portal • Join Our Community</p>
-            <p class="version">v2.0 • Secure Registration</p>
+            <p class="version">v2.1 • Secure Registration</p>
         </div>
     </div>
 </template>

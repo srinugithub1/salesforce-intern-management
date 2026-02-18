@@ -2,9 +2,6 @@ import { LightningElement, track } from 'lwc';
 import registerIntern from '@salesforce/apex/InternAuthController.registerIntern';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { NavigationMixin } from 'lightning/navigation';
-import LightningAlert from 'lightning/alert';
-
-// window.alert('Signup Component Version: 1.0.3 Loaded');
 
 export default class LandingInternSignup extends NavigationMixin(LightningElement) {
     @track isLoading = false;
@@ -55,82 +52,72 @@ export default class LandingInternSignup extends NavigationMixin(LightningElemen
         this.handleSignup();
     }
 
-    handleSignup() {
-        console.log('--- Handle Signup Start ---');
-        // alert('Registration starting for: ' + this.formData.email);
+    async handleSignup() {
+        console.log('--- Handle Signup Async Start (Reverted to Void/Exception) ---');
 
-        this.errorMsg = ''; // Reset messages
+        this.errorMsg = '';
         this.successMsg = '';
 
-        console.log('Form Data State:', JSON.stringify(this.formData));
+        // Basic Client-side validation
         if (!this.formData.lastName || !this.formData.email || !this.formData.phone || !this.formData.password) {
-            this.showToast('Error', 'Please fill all required fields (Last Name, Email, Phone, Password).', 'error');
+            this.errorMsg = 'Please fill all required fields (Last Name, Email, Phone, Password).';
             return;
         }
 
         this.isLoading = true;
 
-        registerIntern({
-            firstName: this.formData.firstName,
-            lastName: this.formData.lastName,
-            email: this.formData.email,
-            phone: this.formData.phone,
-            password: this.formData.password,
-            college: this.formData.college,
-            rollNo: this.formData.rollNo,
-            address: this.formData.address
-        })
-            .then(() => {
-                console.log('Registration Apex Success');
-                this.successMsg = 'Registration Successful! Redirecting to Login...';
-                alert('Success! Registration completed. Redirecting...');
-                this.showToast('Success', this.successMsg, 'success');
-
-                // Wait a moment for the toast then redirect
-                setTimeout(() => {
-                    this.navigateToLogin();
-                }, 2000);
-            })
-            .catch(async (error) => {
-                console.error('Registration Exception caught:', error);
-
-                let message = 'An unexpected error occurred';
-
-                if (error.body) {
-                    if (Array.isArray(error.body)) {
-                        message = error.body.map(e => e.message).join(', ');
-                    } else if (typeof error.body.message === 'string') {
-                        message = error.body.message;
-                    } else if (error.body.pageErrors && error.body.pageErrors.length > 0) {
-                        message = error.body.pageErrors[0].message;
-                    } else {
-                        message = JSON.stringify(error.body);
-                    }
-                } else if (error.message) {
-                    message = error.message;
-                } else if (typeof error === 'string') {
-                    message = error;
-                }
-
-                console.error('Final Extracted Message:', message);
-                this.errorMsg = message;
-                this.isLoading = false;
-
-                // High-visibility Alert
-                await LightningAlert.open({
-                    message: message,
-                    label: 'Registration Error',
-                    theme: 'error',
-                });
+        try {
+            // Apex now returns void. Logic errors throw Exceptions.
+            await registerIntern({
+                firstName: this.formData.firstName,
+                lastName: this.formData.lastName,
+                email: this.formData.email,
+                phone: this.formData.phone,
+                password: this.formData.password,
+                college: this.formData.college,
+                rollNo: this.formData.rollNo,
+                address: this.formData.address
             });
+
+            console.log('Registration Success (Void Return)');
+            this.successMsg = 'Registration Successful! Redirecting to Login...';
+            this.isLoading = false;
+            setTimeout(() => { this.navigateToLogin(); }, 2000);
+
+        } catch (error) {
+            console.error('Registration Exception:', error);
+            this.isLoading = false;
+
+            // Extract User-Friendly Message from Exception
+            let message = 'An unexpected system error occurred';
+            if (error.body) {
+                if (Array.isArray(error.body)) message = error.body.map(e => e.message).join(', ');
+                else if (typeof error.body.message === 'string') message = error.body.message;
+                else if (error.body.pageErrors && error.body.pageErrors.length > 0) message = error.body.pageErrors[0].message;
+                // If the backend throws AuraHandledException('Message'), it often appears in error.body.message
+                else message = JSON.stringify(error.body);
+            } else if (error.message) {
+                message = error.message;
+            } else if (typeof error === 'string') {
+                message = error;
+            }
+
+            // Clean up standard Salesforce error prefixes if present
+            if (message && message.includes('Script-thrown exception')) {
+                message = message.replace('Script-thrown exception', '').trim();
+            }
+
+            this.errorMsg = message;
+
+        } finally {
+            if (!this.successMsg) {
+                this.isLoading = false;
+            }
+        }
     }
 
     navigateToLogin() {
         // Navigate to the 'internLogin' page. 
-        // In Experience Cloud, standard comm_namedPage is often used.
-        // Or if it is the home page, home.
-
-        // Try standard navigation first
         this[NavigationMixin.Navigate]({
             type: 'comm__namedPage',
             attributes: {
@@ -139,8 +126,6 @@ export default class LandingInternSignup extends NavigationMixin(LightningElemen
         });
 
         // Fallback or if using custom component on same page:
-        // Dispatch event if parent is handling visibility (SPA style)
-        // Check if we are in an SPA container. If standalone, NavMixin handles it.
         const event = new CustomEvent('navigatetologin');
         this.dispatchEvent(event);
     }

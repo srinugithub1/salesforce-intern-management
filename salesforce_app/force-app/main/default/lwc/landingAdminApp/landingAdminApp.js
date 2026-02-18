@@ -42,7 +42,19 @@ export default class LandingAdminApp extends LightningElement {
                 this.handleLogout();
             }
         } catch (e) {
-            this.handleLogout();
+            console.error('Admin session check failed', e);
+            const msg = e.message || (e.body ? e.body.message : '');
+
+            // If busy/quota/error, trust the existing token and stored data
+            if (msg.includes('429') || msg.includes('Quota') || msg.includes('Limit') || msg.includes('Check Failed')) {
+                this.token = token;
+                this.adminName = name || 'Admin';
+                this.role = role || 'Team Lead';
+                this.isAuthenticated = true;
+                this.dispatchEvent(new CustomEvent('authenticated'));
+            } else {
+                this.handleLogout();
+            }
         }
         this.isCheckingSession = false;
     }
